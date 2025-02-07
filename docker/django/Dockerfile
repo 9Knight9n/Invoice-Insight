@@ -6,9 +6,18 @@ ARG PYTHONDONTWRITEBYTECODE
 
 WORKDIR /code
 
+# Install system dependencies
 RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends build-essential curl libpq-dev netcat libssl-dev libffi-dev && \
-    apt-get clean
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    libpq-dev \
+    netcat \
+    libssl-dev \
+    libffi-dev \
+    libgl1 \
+    libglib2.0-0 \
+    && apt-get clean
 
 RUN pip install --upgrade pip
 

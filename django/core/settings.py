@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 
     # internal apps
     'authentication',
+    'invoices',
 ]
 
 REST_FRAMEWORK = {
