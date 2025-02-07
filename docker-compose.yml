@@ -16,6 +16,7 @@ services:
       - DEBUG=${DEBUG}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - GITHUB_API_KEY=${GITHUB_API_KEY}
+      - AUTH_ENABLED=${AUTH_ENABLED}
     volumes:
       - ./django:/code
     ports:

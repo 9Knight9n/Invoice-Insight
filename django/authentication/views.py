@@ -1,8 +1,11 @@
 from django.contrib.auth import login
+from django.contrib.auth.models import User
 from rest_framework import generics, authentication, permissions
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from knox.views import LoginView as KnoxLoginView
 from .serializers import UserSerializer, AuthSerializer
+from rest_framework import permissions
+from django.conf import settings
 
 
 class RegisterView(generics.CreateAPIView):
@@ -23,11 +26,15 @@ class LoginView(KnoxLoginView):
         return response
 
 
+
 class ProfileView(generics.RetrieveUpdateAPIView):
-    """Manage the authenticated user"""
     serializer_class = UserSerializer
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.IsAuthenticated,) if settings.AUTH_ENABLED else (permissions.AllowAny,)
 
     def get_object(self):
         """Retrieve and return authenticated user"""
-        return self.request.user
+        if settings.AUTH_ENABLED:
+            return self.request.user
+        else:
+            # Return a dummy user or handle the case when authentication is disabled
+            return User.objects.first()  # Replace with your logic

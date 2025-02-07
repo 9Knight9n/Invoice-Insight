@@ -29,6 +29,15 @@ DEBUG = bool(strtobool(os.getenv("DEBUG", "false")))
 allowed_hosts = os.getenv("ALLOWED_HOSTS", ".localhost,127.0.0.1,[::1]")
 ALLOWED_HOSTS = list(map(str.strip, allowed_hosts.split(",")))
 
+# Read the AUTH_ENABLED environment variable
+AUTH_ENABLED = bool(strtobool(os.getenv("AUTH_ENABLED", "true")))
+
+# Configure authentication classes
+if AUTH_ENABLED:
+    DEFAULT_AUTHENTICATION_CLASSES = ('knox.auth.TokenAuthentication',)
+else:
+    DEFAULT_AUTHENTICATION_CLASSES = ()  # No authentication
+
 
 # Application definition
 
@@ -54,7 +63,7 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': ('knox.auth.TokenAuthentication',),
+    'DEFAULT_AUTHENTICATION_CLASSES': DEFAULT_AUTHENTICATION_CLASSES,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
