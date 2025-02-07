@@ -3,7 +3,6 @@ from rest_framework import generics, authentication, permissions
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from knox.views import LoginView as KnoxLoginView
 from .serializers import UserSerializer, AuthSerializer
-from django.forms.models import model_to_dict
 
 
 class RegisterView(generics.CreateAPIView):
