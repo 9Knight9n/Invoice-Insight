@@ -22,7 +22,8 @@ services:
     ports:
       - "${DJANGO_PORT}:8000"
     depends_on:
-      - celery
+      - redis
+      - postgresql
 
 
   postgresql:
