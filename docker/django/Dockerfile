@@ -17,6 +17,8 @@ RUN apt-get update -y && \
     libffi-dev \
     libgl1 \
     libglib2.0-0 \
+    ghostscript \
+    openjdk-11-jdk \
     && apt-get clean
 
 RUN pip install --upgrade pip

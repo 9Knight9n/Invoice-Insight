@@ -8,10 +8,10 @@ class Invoice(models.Model):
         ('failed', 'Failed'),
     ]
 
-    pdf_file = models.FileField(upload_to='invoices/')
+    pdf_file = models.FileField(upload_to='invoices/pdf_files')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    extracted_text = models.JSONField(null=True, blank=True)  # Store extracted text
-    llm_analysis = models.JSONField(null=True, blank=True)  # Store LLM analysis results
+    extracted_text = models.JSONField(null=True, blank=True)
+    llm_analysis = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -80,7 +80,7 @@ def call_llm_api(extracted_text):
     llm_config = {
         "name": "gpt-4o",
         "api_url": "https://models.inference.ai.azure.com",
-        "api_key": os.getenv("GITHUB_API_KEY")
+        "api_key": os.getenv("OPENAI_API_KEY")
     }
 
     # Initialize the OpenAI client

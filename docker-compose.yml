@@ -15,7 +15,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - GITHUB_API_KEY=${GITHUB_API_KEY}
+      - OPENAI_API_KEY=${GITHUB_API_KEY}
       - AUTH_ENABLED=${AUTH_ENABLED}
     volumes:
       - ./django:/code
@@ -72,6 +72,8 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - OPENAI_API_KEY=${GITHUB_API_KEY}
+      - AUTH_ENABLED=${AUTH_ENABLED}
     volumes:
       - ./django:/code
     depends_on:
