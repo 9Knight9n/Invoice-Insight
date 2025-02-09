@@ -96,17 +96,25 @@ def call_llm_api(extracted_text):
     questions = [
         """
         Extract all fields provided in the invoice, 
-        i don't want field related to items in invoice,they will be extracted later on,
+        except the fields related to items in invoice, they will be extracted later on,
         just need fields that are related to the invoice features.
         return the result as JSON. No more explanation, only a JSON is enough.
-        the json format should be list of objects each with two fields of field_name and extracted_value 
+        the json format should be list of objects each with two fields of 'Name' and 'Value' 
+        'Name' is the name of the field in the invoice, 
+        'Value' is the value of the field in the invoice.
+        both 'Name' and 'Value' should be user readable and easy to understand.
         """ ,
         """
         Extract items and their fields provided in the invoice, 
         return the result as JSON. No more explanation, only a JSON is enough.
-        the json format should be list of objects with one mandatory field named item_name
-        and two optional field named hs_code and part_number, add any other fields the invoice provide
-        for each item as well, name these fields as they are named in the invoice. 
+        the json format should be list of objects with one mandatory field named 'Item Name'
+        and two optional field named 'HS Code' and 'Part Number', 
+        'HS Code' field is the Harmonized System Code assigned to items in the invoice.
+        'Part Number' field is self explanatory.
+        assign null value for any of 'HS Code' or 'Part Number' if value not provided. 
+        add any other fields the invoice provide for each item as well, 
+        name these fields as they are named in the invoice. 
+        be careful not to add the total row as a item in invoice.
         """
     ]
 
