@@ -16,7 +16,7 @@ def process_pdf(invoice_id):
 
         # Call the LLM API
         llm_analysis = call_llm_api(extracted_text)
-        invoice.llm_analysis = llm_analysis
+        invoice.general_features, invoice.item_wise_features = llm_analysis
         invoice.status = 'completed'
         invoice.save()
 
