@@ -72,7 +72,7 @@ def extract_text_from_pdf(pdf_file):
 
     return extracted_data
 
-def call_llm_api(extracted_text):
+def call_llm_api_general(extracted_text):
     """
     Call the LLM API (gpt-4o) to analyze the extracted text.
     """
@@ -93,8 +93,7 @@ def call_llm_api(extracted_text):
     context = json.dumps(extracted_text, indent=4)
 
     # Define the question/prompt
-    questions = [
-        """
+    question = """
         Extract all fields provided in the invoice, 
         except the fields related to items in invoice, they will be extracted later on,
         just need fields that are related to the invoice features.
@@ -103,8 +102,68 @@ def call_llm_api(extracted_text):
         'Name' is the name of the field in the invoice, 
         'Value' is the value of the field in the invoice.
         both 'Name' and 'Value' should be user readable and easy to understand.
-        """ ,
         """
+
+    # Call the LLM API
+    completion = client.chat.completions.create(
+        model=llm_config["name"],
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an assistant that answers questions based on the provided context. The context is extracted text and tables from an invoice."
+            },
+            {
+                "role": "user",
+                "content": f'Here is the context: {context}'
+            },
+            {
+                "role": "user",
+                "content": question
+            }
+        ]
+    )
+
+    # Extract the response
+    if completion and completion.choices and completion.choices[0] and completion.choices[0].message and \
+            completion.choices[0].message.content:
+        content = completion.choices[0].message.content
+        # Remove Markdown code block markers if present
+        if content.startswith("```json"):
+            content = content.strip("```json").strip("```")
+        elif content.startswith("```"):
+            content = content.strip("```")
+
+        try:
+            # Validate if it's a proper JSON
+            return json.loads(content)
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON format in response."}
+    else:
+        return {"error": "No valid response received from the API."}
+
+
+def call_llm_api_item_wise(extracted_text):
+    """
+    Call the LLM API (gpt-4o) to analyze the extracted text.
+    """
+    # Define the LLM configuration
+    llm_config = {
+        "name": "gpt-4o",
+        "api_url": "https://models.inference.ai.azure.com",
+        "api_key": os.getenv("OPENAI_API_KEY")
+    }
+
+    # Initialize the OpenAI client
+    client = OpenAI(
+        base_url=llm_config["api_url"],
+        api_key=llm_config["api_key"],
+    )
+
+    # Prepare the context for the LLM
+    context = json.dumps(extracted_text, indent=4)
+
+    # Define the question/prompt
+    question = """
         Extract items and their fields provided in the invoice, 
         return the result as JSON. No more explanation, only a JSON is enough.
         the json format should be list of objects with one mandatory field named 'Item Name'
@@ -116,49 +175,40 @@ def call_llm_api(extracted_text):
         name these fields as they are named in the invoice. 
         be careful not to add the total row as a item in invoice.
         """
-    ]
 
-    # List to store answers
-    answers = []
+    # Call the LLM API
+    completion = client.chat.completions.create(
+        model=llm_config["name"],
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an assistant that answers questions based on the provided context. The context is extracted text and tables from an invoice."
+            },
+            {
+                "role": "user",
+                "content": f'Here is the context: {context}'
+            },
+            {
+                "role": "user",
+                "content": question
+            }
+        ]
+    )
 
-    # Iterate over each question
-    for question in questions:
-        # Call the LLM API
-        completion = client.chat.completions.create(
-            model=llm_config["name"],
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an assistant that answers questions based on the provided context. The context is extracted text and tables from an invoice."
-                },
-                {
-                    "role": "user",
-                    "content": f'Here is the context: {context}'
-                },
-                {
-                    "role": "user",
-                    "content": question
-                }
-            ]
-        )
+    # Extract the response
+    if completion and completion.choices and completion.choices[0] and completion.choices[0].message and \
+            completion.choices[0].message.content:
+        content = completion.choices[0].message.content
+        # Remove Markdown code block markers if present
+        if content.startswith("```json"):
+            content = content.strip("```json").strip("```")
+        elif content.startswith("```"):
+            content = content.strip("```")
 
-        # Extract the response
-        if completion and completion.choices and completion.choices[0] and completion.choices[0].message and \
-                completion.choices[0].message.content:
-            content = completion.choices[0].message.content
-            # Remove Markdown code block markers if present
-            if content.startswith("```json"):
-                content = content.strip("```json").strip("```")
-            elif content.startswith("```"):
-                content = content.strip("```")
-
-            try:
-                # Validate if it's a proper JSON
-                answers.append(json.loads(content))
-            except json.JSONDecodeError:
-                answers.append({"error": f"Invalid JSON format in response for question: {question}"})
-        else:
-            answers.append({"error": f"No valid response received from the API for question: {question}"})
-
-    # Return the list of answers
-    return answers
+        try:
+            # Validate if it's a proper JSON
+            return json.loads(content)
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON format in response."}
+    else:
+        return {"error": "No valid response received from the API."}
