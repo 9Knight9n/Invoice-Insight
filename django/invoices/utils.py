@@ -93,40 +93,64 @@ def call_llm_api(extracted_text):
     context = json.dumps(extracted_text, indent=4)
 
     # Define the question/prompt
-    question = "Extract all fields provided in the invoice and return the result as JSON. No more explanation, only a JSON is enough."
+    questions = [
+        """
+        Extract all fields provided in the invoice, 
+        i don't want field related to items in invoice,they will be extracted later on,
+        just need fields that are related to the invoice features.
+        return the result as JSON. No more explanation, only a JSON is enough.
+        the json format should be list of objects each with two fields of field_name and extracted_value 
+        """ ,
+        """
+        Extract items and their fields provided in the invoice, 
+        return the result as JSON. No more explanation, only a JSON is enough.
+        the json format should be list of objects with one mandatory field named item_name
+        and two optional field named hs_code and part_number, add any other fields the invoice provide
+        for each item as well, name these fields as they are named in the invoice. 
+        """
+    ]
 
-    # Call the LLM API
-    completion = client.chat.completions.create(
-        model=llm_config["name"],
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an assistant that answers questions based on the provided context. The context is extracted text and tables from an invoice."
-            },
-            {
-                "role": "user",
-                "content": f'Here is the context: {context}'
-            },
-            {
-                "role": "user",
-                "content": question
-            }
-        ]
-    )
+    # List to store answers
+    answers = []
 
-    # Extract and return the response
-    if completion and completion.choices and completion.choices[0] and completion.choices[0].message and completion.choices[0].message.content:
-        content = completion.choices[0].message.content
-        # Remove markdown code block markers if present
-        if content.startswith("```json"):
-            content = content.strip("```json").strip("```")
-        elif content.startswith("```"):
-            content = content.strip("```")
+    # Iterate over each question
+    for question in questions:
+        # Call the LLM API
+        completion = client.chat.completions.create(
+            model=llm_config["name"],
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an assistant that answers questions based on the provided context. The context is extracted text and tables from an invoice."
+                },
+                {
+                    "role": "user",
+                    "content": f'Here is the context: {context}'
+                },
+                {
+                    "role": "user",
+                    "content": question
+                }
+            ]
+        )
 
-        try:
-            # Validate if it's a proper JSON
-            return json.loads(content)
-        except json.JSONDecodeError:
-            return {"error": "Invalid JSON format in response."}
-    else:
-        return {"error": "No valid response received from the API."}
+        # Extract the response
+        if completion and completion.choices and completion.choices[0] and completion.choices[0].message and \
+                completion.choices[0].message.content:
+            content = completion.choices[0].message.content
+            # Remove Markdown code block markers if present
+            if content.startswith("```json"):
+                content = content.strip("```json").strip("```")
+            elif content.startswith("```"):
+                content = content.strip("```")
+
+            try:
+                # Validate if it's a proper JSON
+                answers.append(json.loads(content))
+            except json.JSONDecodeError:
+                answers.append({"error": f"Invalid JSON format in response for question: {question}"})
+        else:
+            answers.append({"error": f"No valid response received from the API for question: {question}"})
+
+    # Return the list of answers
+    return answers
