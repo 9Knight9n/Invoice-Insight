@@ -41,8 +41,9 @@ class InvoiceDetailView(APIView):
             invoice = Invoice.objects.get(id=invoice_id)
             data = {
                 "id": invoice.id,
-                "extracted_text": invoice.extracted_text,
-                "llm_analysis": invoice.llm_analysis,
+                "item_wise_features": invoice.item_wise_features,
+                "general_features": invoice.general_features,
+                "status": invoice.status,
             }
             return Response(data, status=status.HTTP_200_OK)
         except Invoice.DoesNotExist:
