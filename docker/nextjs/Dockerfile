@@ -16,8 +16,8 @@ COPY nextjs .
 
 ENV NODE_ENV production
 
-ARG API_BASE_URL
-ENV API_BASE_URL=${API_BASE_URL}
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
 RUN apt-get update \
     && apt-get install -y ca-certificates
