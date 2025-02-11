@@ -72,21 +72,17 @@ def extract_text_from_pdf(pdf_file):
 
     return extracted_data
 
+# Define the LLM configuration
+llm_config = {
+    "name": "gpt-4o",
+    # "api_url": "https://models.inference.ai.azure.com",
+    "api_key": os.getenv("OPENAI_API_KEY")
+}
+
 def call_llm_api_general(extracted_text):
     """
     Call the LLM API (gpt-4o) to analyze the extracted text.
     """
-    # Define the LLM configuration
-    llm_config = {
-        "name": "gpt-4o",
-        "api_url": "https://models.inference.ai.azure.com",
-        "api_key": os.getenv("OPENAI_API_KEY")
-    }
-    # llm_config = {
-    #     "name": "Meta-Llama-3.1-405B-Instruct",
-    #     "api_url": "https://api.sambanova.ai/v1",
-    #     "api_key": os.getenv("OPENAI_API_KEY")
-    # }
 
     # Initialize the OpenAI client
     client = OpenAI(
@@ -152,12 +148,6 @@ def call_llm_api_item_wise(extracted_text):
     """
     Call the LLM API (gpt-4o) to analyze the extracted text.
     """
-    # Define the LLM configuration
-    llm_config = {
-        "name": "gpt-4o",
-        "api_url": "https://models.inference.ai.azure.com",
-        "api_key": os.getenv("OPENAI_API_KEY")
-    }
 
     # Initialize the OpenAI client
     client = OpenAI(
