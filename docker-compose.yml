@@ -17,6 +17,7 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - OPENAI_API_KEY=${GITHUB_API_KEY}
       - AUTH_ENABLED=${AUTH_ENABLED}
+      - APP_BASE_URL=${APP_BASE_URL}
     volumes:
       - ./django:/code
     ports:
@@ -56,6 +57,7 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - OPENAI_API_KEY=${GITHUB_API_KEY}
       - AUTH_ENABLED=${AUTH_ENABLED}
+      - APP_BASE_URL=${APP_BASE_URL}
     volumes:
       - ./django:/code
     depends_on:
