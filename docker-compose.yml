@@ -79,6 +79,9 @@ services:
     depends_on:
       - redis
       - postgresql
+    dns:
+      - 178.22.122.100
+      - 185.51.200.2
 
 volumes:
   postgres_data:
