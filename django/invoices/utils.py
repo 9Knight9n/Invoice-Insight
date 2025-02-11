@@ -86,7 +86,7 @@ def call_llm_api_general(extracted_text):
 
     # Initialize the OpenAI client
     client = OpenAI(
-        base_url=llm_config["api_url"],
+        # base_url=llm_config["api_url"],
         api_key=llm_config["api_key"],
     )
 
@@ -151,7 +151,7 @@ def call_llm_api_item_wise(extracted_text):
 
     # Initialize the OpenAI client
     client = OpenAI(
-        base_url=llm_config["api_url"],
+        # base_url=llm_config["api_url"],
         api_key=llm_config["api_key"],
     )
 
