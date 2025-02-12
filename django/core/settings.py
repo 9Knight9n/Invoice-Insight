@@ -86,9 +86,8 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    os.environ.get('CORS_ALLOWED_ORIGINS', "http://localhost/"),
+    os.environ.get('CORS_ALLOWED_ORIGINS', "http://localhost"),
 ]
-print(CORS_ALLOWED_ORIGINS)
 
 ROOT_URLCONF = 'core.urls'
 
