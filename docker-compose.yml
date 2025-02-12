@@ -75,9 +75,11 @@ services:
           NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
       command: npm run start
       environment:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
       ports:
         - "${NEXTJS_PORT}:3000"
+      depends_on:
+        - django
 
 
 volumes:
