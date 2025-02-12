@@ -17,7 +17,6 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - OPENAI_API_KEY=${GITHUB_API_KEY}
       - AUTH_ENABLED=${AUTH_ENABLED}
-      - APP_BASE_URL=${APP_BASE_URL}
     volumes:
       - ./django:/code
     ports:
@@ -57,7 +56,6 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - OPENAI_API_KEY=${GITHUB_API_KEY}
       - AUTH_ENABLED=${AUTH_ENABLED}
-      - APP_BASE_URL=${APP_BASE_URL}
     volumes:
       - ./django:/code
     depends_on:
@@ -68,19 +66,28 @@ services:
       - 185.51.200.2
 
   nextjs:
-      build:
-        context: .
-        dockerfile: docker/nextjs/Dockerfile
-        args:
-          NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
-      command: npm run start
-      environment:
-        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
-      ports:
-        - "${NEXTJS_PORT}:3000"
-      depends_on:
-        - django
+    build:
+      context: .
+      dockerfile: docker/nextjs/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    command: npm run start
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+    depends_on:
+      - django
+
+  nginx:
+    container_name: nginx
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    volumes:
+      - static:/app/web/static
+    ports:
+      - "${NGINX_PORT}:80"
 
 
 volumes:
   postgres_data:
+  static:
