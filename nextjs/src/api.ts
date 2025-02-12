@@ -1,4 +1,4 @@
-const baseUrl = `http://${process.env.NEXT_PUBLIC_API_BASE_URL}`;
+const baseUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}`;
 
 export const getInvoice = async (invoiceId: number): Promise<InvoiceGeneralData> => {
   const response = await fetch(`${baseUrl}/api/invoices/invoice/${invoiceId}/`, {
