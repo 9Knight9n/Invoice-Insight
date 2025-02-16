@@ -1,4 +1,4 @@
-const baseUrl = ``;
+const baseUrl = 'http://85.198.9.203:8000';
 
 export const getInvoice = async (invoiceId: number): Promise<InvoiceGeneralData> => {
   const response = await fetch(`${baseUrl}/api/invoices/invoice/${invoiceId}/`, {

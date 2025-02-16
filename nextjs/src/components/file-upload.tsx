@@ -4,6 +4,7 @@ import {Box, Typography, Button, List, ListItem, ListItemAvatar, ListItemText} f
 import Image from "next/image";
 import {getInvoice, InvoiceGeneralData, uploadInvoice} from "@/api";
 import { enqueueSnackbar } from 'notistack';
+import Processing from "@/components/processing";
 
 type Props = {
   setGeneralData: React.Dispatch<React.SetStateAction<InvoiceGeneralData | undefined>>;
@@ -63,48 +64,53 @@ const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID}) => {
 
   return (
     <Box>
-      <Box
-        onDrop={onDrop}
-        onDragOver={(e) => e.preventDefault()}
-        sx={{
-          border: '2px dashed rgba(56, 78, 183, 0.3)',
-          backgroundColor: '#F8F8FF',
-          borderRadius: '10px',
-          padding: !!files.length ? '20px' : '80px',
-          textAlign: 'center',
-          cursor: 'pointer',
-          transition: '0.3s',
-        }}
-      >
-        <input
-          type="file"
-          accept=".pdf, .png, .jpeg, .jpg"
-          onChange={handleBrowse}
-          style={{display: 'none'}}
-          id="file-upload"
-          multiple={false}
-        />
-        <label htmlFor="file-upload">
-          <Image src={"/images/upload.svg"} alt={"upload"} width={76} height={62}/>
-          <Typography variant="body1">
-            Drag & drop your file here, or click to browse
-          </Typography>
-          <Button variant="outlined" component="span" sx={{marginTop: '10px'}}>
-            Browse Files
-          </Button>
-        </label>
-      </Box>
+      {isLoading ?
+        <Box width="100%" display="flex" justifyContent="center" alignItems="center">
+          <Processing/>
+        </Box> :
+        <Box
+          onDrop={onDrop}
+          onDragOver={(e) => e.preventDefault()}
+          sx={{
+            border: '2px dashed rgba(56, 78, 183, 0.3)',
+            backgroundColor: '#F8F8FF',
+            borderRadius: '10px',
+            padding: !!files.length ? '20px' : '80px',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: '0.3s',
+          }}
+        >
+          <input
+            type="file"
+            accept=".pdf, .png, .jpeg, .jpg"
+            onChange={handleBrowse}
+            style={{display: 'none'}}
+            id="file-upload"
+            multiple={false}
+          />
+          <label htmlFor="file-upload">
+            <Image src={"/images/upload.svg"} alt={"upload"} width={76} height={62}/>
+            <Typography variant="body1">
+              Drag & drop your file here, or click to browse
+            </Typography>
+            <Button variant="outlined" component="span" sx={{marginTop: '10px'}}>
+              Browse Files
+            </Button>
+          </label>
+        </Box>
+      }
       {/*{!!files.length && <Typography color="textSecondary" mt={3} mb={1}>{files.length} files uploaded:</Typography>}*/}
-      <List color={"red"}>
+      {!!files.length && <List color={"red"}>
         {files.map((file, index) => (
           <ListItem key={index} sx={{p: 0}}>
             <ListItemAvatar sx={{minWidth: "unset", mt: 0.3}}>
-              <Image src={"/images/file.svg"} alt={"file"} width={18} height={18}/>
+              <Image src={"/images/checkCircle.svg"} alt={"file"} width={28} height={28}/>
             </ListItemAvatar>
             <ListItemText primary={file.name} sx={{ml: 1}}/>
           </ListItem>
         ))}
-      </List>
+      </List>}
       {!!files.length &&
         <Button
           variant={"contained"}
