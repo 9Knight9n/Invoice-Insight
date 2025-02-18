@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Invoice
+from .models import Invoice, InvoiceItem
 from .serializers import CommentSerializer
 from .tasks import process_pdf
 from rest_framework import permissions
@@ -39,9 +39,20 @@ class InvoiceDetailView(APIView):
     def get(self, request, invoice_id, *args, **kwargs):
         try:
             invoice = Invoice.objects.get(id=invoice_id)
+            items = InvoiceItem.objects.filter(invoice=invoice).values(
+                    "name",
+                    "hs_code",
+                    "hs_code_method",
+                    "part_number",
+                    "part_number_method",
+                    "quarantine",
+                    "quarantine_detail",
+                    "quarantine_method",
+                    "metadata",
+                )
             data = {
                 "id": invoice.id,
-                "item_wise_features": invoice.item_wise_features,
+                "item_wise_features": items if len(items) > 0 else None,
                 "general_features": invoice.general_features,
                 "status": invoice.status,
             }

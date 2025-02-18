@@ -1,9 +1,5 @@
-import math
-
 from django.contrib.auth.models import User
 from django.db import models
-from django.core.exceptions import ValidationError
-
 
 class Invoice(models.Model):
     STATUS_CHOICES = [
@@ -16,7 +12,6 @@ class Invoice(models.Model):
     pdf_file = models.FileField(upload_to='invoices/pdf_files')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     extracted_text = models.JSONField(null=True, blank=True)
-    item_wise_features = models.JSONField(null=True, blank=True)
     general_features = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -26,55 +21,54 @@ class Invoice(models.Model):
 
     def clean(self):
         super().clean()
-        def sanitize_json(value):
-            """Recursively replace NaN with None in JSON-serializable data."""
-            if isinstance(value, float) and math.isnan(value):
-                return None
-            elif isinstance(value, dict):
-                return {k: sanitize_json(v) for k, v in value.items()}
-            elif isinstance(value, list):
-                return [sanitize_json(v) for v in value]
-            else:
-                return value
 
-        # Sanitize JSON fields
-        self.extracted_text = sanitize_json(self.extracted_text) if self.extracted_text else None
-        self.item_wise_features = sanitize_json(self.item_wise_features) if self.item_wise_features else None
-        self.general_features = sanitize_json(self.general_features) if self.general_features else None
+        if self.general_features is None:
+            return
 
-        try:
-            if self.item_wise_features is not None:
-                if not isinstance(self.item_wise_features, list):
-                    raise ValidationError({'item_wise_features': 'item_wise_features must be a list of objects.'})
-
-                for item in self.item_wise_features:
-                    if not isinstance(item, dict):
-                        raise ValidationError({'item_wise_features': 'Each item in item_wise_features must be an object (dictionary).'})
-                    if 'Item Name' not in item:
-                        raise ValidationError({'item_wise_features': 'Each object in item_wise_features must have a "item_name" field.'})
-        except ValidationError as e:
-            print(e.__str__())
-            self.item_wise_features = None
-
-        try:
-            if self.general_features is not None:
-                if not isinstance(self.general_features, list):
-                    raise ValidationError({'general_features': 'general_features must be a list of objects.'})
-
-                for item in self.general_features:
-                    if not isinstance(item, dict):
-                        raise ValidationError({'general_features': 'Each item in general_features must be an object (dictionary).'})
-                    if 'Name' not in item:
-                        raise ValidationError({'general_features': 'Each object in general_features must have a "field_name" field.'})
-                    if 'Value' not in item:
-                        raise ValidationError({'general_features': 'Each object in general_features must have a "extracted_value" field.'})
-        except ValidationError as e:
-            print(e.__str__())
+        if not isinstance(self.general_features, list):
             self.general_features = None
+            return
+
+        new_general_features = []
+        for item in self.general_features:
+            if not isinstance(item, dict):
+                continue
+            if 'Name' not in item:
+                continue
+            if 'Value' not in item:
+                continue
+            new_general_features.append(item)
+        self.general_features = new_general_features
+
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class InvoiceItem(models.Model):
+    USED_METHOD_CHOICES = [
+        ('extracted_from_invoice', 'Extracted from invoice'),
+        ('naive_llm', 'Naive LLM'),
+    ]
+    QUARANTINE_CHOICES = [
+        ('yes', 'Yes'),
+        ('no', 'No'),
+        ('maybe', 'Maybe'),
+    ]
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='items')
+    name = models.TextField()
+    hs_code = models.CharField(max_length=20, null=True, blank=True)
+    hs_code_method = models.CharField(max_length=30, choices=USED_METHOD_CHOICES, null=True, blank=True)
+    part_number = models.CharField(max_length=50, null=True, blank=True)
+    part_number_method = models.CharField(max_length=30, choices=USED_METHOD_CHOICES, null=True, blank=True)
+    quarantine = models.CharField(max_length=20, choices=QUARANTINE_CHOICES, null=True, blank=True)
+    quarantine_detail = models.TextField(null=True, blank=True)
+    quarantine_method = models.CharField(max_length=30, choices=USED_METHOD_CHOICES, null=True, blank=True)
+    metadata = models.JSONField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Item {self.part_number} in Invoice {self.invoice.id}"
 
 
 class Comment(models.Model):
