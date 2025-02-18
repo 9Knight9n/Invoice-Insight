@@ -4,13 +4,13 @@ from openai import OpenAI
 
 # Define the LLM configuration
 llm_config = {
-    "name": "gpt-4o",
+    "name": "meta-llama/llama-3.3-70b-instruct:free",
     "api_key": os.getenv("OPENAI_API_KEY")
 }
 
 # Initialize the OpenAI client
 client = OpenAI(
-    # base_url=llm_config["api_url"],
+    base_url="https://openrouter.ai/api/v1",
     api_key=llm_config["api_key"],
 )
 
