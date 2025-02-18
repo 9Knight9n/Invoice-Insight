@@ -39,11 +39,17 @@ const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID}) => {
       uploadInvoice(files[0]).then(r => {
         setInvoiceID(r.invoice_id);
         enqueueSnackbar(r.message, {variant: "info"});
+        // setGeneralData(mockInvoiceData);
+        // setIsLoading(false);
         const checkInvoiceStatus = () => {
           getInvoice(r.invoice_id).then((response) => {
             console.log(response.status);
-            if (response.status === 'processing') {
-              setTimeout(checkInvoiceStatus, 1000);
+            if (response.status === 'processing' || response.status === 'pending') {
+              if (!!response.general_features?.length && !!response.item_wise_features?.length)
+                setGeneralData(prevState => ({
+                  ...prevState, ...response
+                }));
+              setTimeout(checkInvoiceStatus, 2000);
             } else if (response.status === 'completed') {
               console.log('Invoice processing completed:', response);
               setGeneralData(response);

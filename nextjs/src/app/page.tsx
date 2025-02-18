@@ -3,7 +3,7 @@ import FileUpload from "@/components/file-upload";
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid2';
 import React, {useState} from "react";
-import {createInvoiceComment, InvoiceGeneralData} from "@/api";
+import {createInvoiceComment, InvoiceGeneralData, ItemWiseFeature} from "@/api";
 import {
   DataGrid,
   GridToolbarContainer,
@@ -26,37 +26,40 @@ export default function Home() {
   const [invoiceID, setInvoiceID] = useState<number>();
   const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false);
 
-  const mainFields = ['Item Name', 'HS Code', 'Part Number'];
+  // const mainFields = ['Item Name', 'HS Code', 'Part Number'];
   const createDynamicColumns = (data: { [key: string]: string | null }[]) => {
     if (!data || data.length === 0) return [];
     const dynamicFields = Object.keys(data[0]).filter(
-      (key) => !mainFields.includes(key)
+      // (key) => !mainFields.includes(key)
+      (key) => key.replaceAll("_", " ")
     );
     return [
-      ...mainFields,
+      // ...mainFields,
       ...dynamicFields,
     ].map((field) => ({
       field,
-      headerName: field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1'),
+      headerName: field.replaceAll("_", " ").split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ").replace(/\bHs Code\b/i, "HS Code"),
       flex: field === "Description" || field === "D E S C R I P T I O N" ? 2.5 : 1,
       renderCell: (params: GridRenderCellParams) => (
         <Box display="flex" alignItems="center">
           {params.value !== null && <CopyButton text={params.value} />}
-          <Typography>{params.value ?? "..."}</Typography>
+          <Typography color={params.value === "extracted_from_invoice" ? "success" : params.value === "naive_llm" ? "warning" : "textPrimary"}>
+            {params.value?.replaceAll("_", " ") || ""}
+          </Typography>
         </Box>
       ),
     }));
   };
   const createColumns = (data: { [key: string]: string | number | null }[]) => {
     if (!data || data.length === 0) return [];
-    return Object.keys(data[0]).map((key) => ({
+    return Object.keys(data[0])?.map((key) => ({
       field: key,
       headerName: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' '),
       flex: key.toLowerCase() === "value" ? 3 : 1,
       renderCell: (params: GridRenderCellParams) => (
         <Box display="flex" alignItems="center">
           {params.value !== null && <CopyButton text={params.value} />}
-          <Typography>{params.value ?? "..."}</Typography>
+          <Typography>{params.value?.replaceAll("_", " ") || "..."}</Typography>
         </Box>
       ),
     }));
@@ -68,8 +71,23 @@ export default function Home() {
       '100%': { backgroundPosition: '0% 50%' },
     },
   };
+  const processItemWiseFeatures = <T extends Partial<ItemWiseFeature>>(
+    itemWiseFeatures: T[],
+    hasID: boolean
+  ) => {
+    return itemWiseFeatures?.map((row, index) => {
+      const { metadata, ...rest } = row;
+      if (hasID)
+        return {
+          ...rest,
+          ...metadata,
+          id: (index + 1).toString()
+        };
+      else return { ...rest, ...metadata };
+    });
+  };
   return (
-    <Box display={"flex"} flexDirection={"column"} gap={4} justifyContent={"center"} alignItems={"center"} p={4} minHeight={"100svh"} sx={{background: 'linear-gradient(270deg, #F4F4FF, #E0E7FF, #C7D2FE, #A5B4FC, #F4F4FF)', backgroundSize: "400% 400%", animation: "gradientAnimation 10s ease infinite", ...animationStyle}}>
+    <Box display={"flex"} flexDirection={"column"} gap={4} justifyContent={"center"} alignItems={"center"} p={{md: 4, xs: 1}} minHeight={"100svh"} sx={{background: 'linear-gradient(270deg, #F4F4FF, #E0E7FF, #C7D2FE, #A5B4FC, #F4F4FF)', backgroundSize: "400% 400%", animation: "gradientAnimation 10s ease infinite", ...animationStyle}}>
       <Head>
         <title>Invoice Insight</title>
       </Head>
@@ -77,11 +95,11 @@ export default function Home() {
         <Typography variant="h1" fontWeight={800} fontSize={"36px"} sx={{background: "linear-gradient(90deg, #3E50B4, #8E24AA)", WebkitBackgroundClip: 'text', WebkitTextFillColor: "transparent", textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'}}>
           Invoice Insight
         </Typography>
-        <Typography component="p" color="textSecondary">
+        <Typography component="p" color="textSecondary" textAlign={"center"}>
           Transform Your Invoices into Valuable Insights Instantly, Simplifying Your Financial Management!
         </Typography>
       </Box>}
-      <Box display="flex" flexDirection="column" bgcolor="white" p={4} borderRadius={4} minWidth={generalData ? "100%" : "50%"} sx={{ transition: "0.5s" }}>
+      <Box display="flex" flexDirection="column" bgcolor="white" p={4} borderRadius={4} minWidth={generalData ? "100%" : "50%"} maxWidth={"100%"} sx={{ transition: "0.5s" }}>
         {!generalData && <FileUpload setGeneralData={setGeneralData} setInvoiceID={setInvoiceID}/>}
         {generalData && invoiceID &&
           <Grow in={true} {...{ timeout: 1000 }}>
@@ -91,7 +109,7 @@ export default function Home() {
                   rowHeight={30}
                   columnHeaderHeight={40}
                   rows={generalData?.general_features || []}
-                  columns={createColumns(generalData.general_features)}
+                  columns={createColumns(generalData.general_features ?? [])}
                   getRowId={(row) => row.Name}
                   // checkboxSelection
                   // hideFooterPagination={true}
@@ -106,24 +124,22 @@ export default function Home() {
                   getRowClassName={(params) =>
                     params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'
                   }
+                  rowSelection={false}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 12 }}>
                 <StripedDataGrid
                   rowHeight={30}
                   columnHeaderHeight={40}
-                  rows={generalData?.item_wise_features?.map((row, index) => ({
-                    ...row,
-                    id: index + 1,
-                  })) || []}
-                  columns={createDynamicColumns(generalData?.item_wise_features)}
+                  rows={processItemWiseFeatures(generalData?.item_wise_features ?? [], true)}
+                  columns={createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features ?? [] , false))}
                   getRowId={(row) => row.id}
                   // checkboxSelection
                   // hideFooterPagination={true}
                   // hideFooterSelectedRowCount={true}
                   // hideFooter={true}
                   slots={{
-                    toolbar: () => CustomToolbar("Items in Invoice with Detected HS Codes and Part Numbers"),
+                    toolbar: () => CustomToolbar("Items in Invoice with Detected HS Codes and Part Numbers (Detailed)"),
                   }}
                   sx={{
                     borderRadius: "12px",
@@ -131,6 +147,30 @@ export default function Home() {
                   getRowClassName={(params) =>
                     params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'
                   }
+                  rowSelection={false}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 12 }}>
+                <StripedDataGrid
+                  rowHeight={30}
+                  columnHeaderHeight={40}
+                  rows={processItemWiseFeatures(generalData?.item_wise_features ?? [], true)}
+                  columns={createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({name, hs_code, hs_code_method, part_number, part_number_method, quarantine}) => ({ name, hs_code, hs_code_method, part_number, part_number_method, quarantine })) ?? [], false))}
+                  getRowId={(row) => row.id}
+                  // checkboxSelection
+                  // hideFooterPagination={true}
+                  // hideFooterSelectedRowCount={true}
+                  // hideFooter={true}
+                  slots={{
+                    toolbar: () => CustomToolbar("Items in Invoice with Detected HS Codes and Part Numbers (Summary)"),
+                  }}
+                  sx={{
+                    borderRadius: "12px",
+                  }}
+                  getRowClassName={(params) =>
+                    params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'
+                  }
+                  rowSelection={false}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 12 }}>
@@ -158,7 +198,7 @@ export default function Home() {
                     }).finally(() => {setIsSubmittingComment(false)});
                     enqueueSnackbar("Your feedback has been successfully saved!", {variant: "success"});
                     setComment("");
-                  }} >
+                  }}>
                     Submit Comment
                     <Image src={"/images/send.svg"} alt={"refresh"} width={20} height={20} style={{marginLeft: "4px"}}/>
                   </Button>
