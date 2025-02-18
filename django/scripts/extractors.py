@@ -18,6 +18,8 @@ def sanitize_json(value):
         return {k: sanitize_json(v) for k, v in value.items()}
     elif isinstance(value, list):
         return [sanitize_json(v) for v in value]
+    elif isinstance(value, str):
+        return value.strip()
     else:
         return value
 
@@ -99,7 +101,7 @@ def extract_json(content):
         return {"error": "Invalid JSON format in response."}
 
 def extract_string(content):
-    return content if not content == "None" else None
+    return content.strip() if not content == "None" else None
 
 def extract_fuzzy(content):
     if content.startswith('yes'):
