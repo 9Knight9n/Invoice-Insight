@@ -19,11 +19,13 @@ import Image from "next/image";
 import { enqueueSnackbar } from 'notistack';
 import Head from "next/head";
 import CopyButton from "@/components/copy-button";
+import Loading from "@/components/loading";
 
 export default function Home() {
   const [generalData, setGeneralData] = useState<InvoiceGeneralData>();
   const [comment, setComment] = useState<string>("");
   const [invoiceID, setInvoiceID] = useState<number>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false);
 
   // const mainFields = ['Item Name', 'HS Code', 'Part Number'];
@@ -100,10 +102,16 @@ export default function Home() {
         </Typography>
       </Box>}
       <Box display="flex" flexDirection="column" bgcolor="white" p={4} borderRadius={4} minWidth={generalData ? "100%" : "50%"} maxWidth={"100%"} sx={{ transition: "0.5s" }}>
-        {!generalData && <FileUpload setGeneralData={setGeneralData} setInvoiceID={setInvoiceID}/>}
+        {!generalData && <FileUpload setGeneralData={setGeneralData} setInvoiceID={setInvoiceID} isLoading={isLoading} setIsLoading={setIsLoading}/>}
         {generalData && invoiceID &&
           <Grow in={true} {...{ timeout: 1000 }}>
             <Grid container spacing={2}>
+              {isLoading &&<Grid size={{xs: 12, md: 12}}>
+                <Box mt={-4} display={"flex"} flexDirection={"column"} alignItems={"center"} justifyContent={"center"} width={"100%"} textAlign={"center"}>
+                  <Loading/>
+                  <Typography mt={-4} color={"textSecondary"}>Still processing your data. Please wait a moment.</Typography>
+                </Box>
+              </Grid>}
               <Grid size={{ xs: 12, md: 12 }}>
                 <StripedDataGrid
                   rowHeight={30}

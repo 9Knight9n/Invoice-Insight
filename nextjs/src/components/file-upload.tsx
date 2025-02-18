@@ -9,11 +9,11 @@ import Processing from "@/components/processing";
 type Props = {
   setGeneralData: React.Dispatch<React.SetStateAction<InvoiceGeneralData | undefined>>;
   setInvoiceID: React.Dispatch<React.SetStateAction<number | undefined>>;
+  isLoading: boolean;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
-const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID}) => {
+const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID, isLoading, setIsLoading}) => {
   const [files, setFiles] = useState<File[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
 
   const onDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
