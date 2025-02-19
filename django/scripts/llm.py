@@ -83,14 +83,16 @@ question1 = \
 # list items in invoice
 question2 = \
     """
-        Extract list of items, 
+        Extract list of items or products in invoice,  
         return the result as JSON. No more explanation, only a JSON is enough. 
         provide whole JSON and do not truncate the json. 
         all values in the JSON must be converted to string if they are not. 
         the json format should be list of strings.
         on some invoices item names might be same as part number and that's ok, 
-        in cases like this when no item name is provided prefer part number 
-        than description to assign as item name.
+        in cases like this when no item name is provided check other provided fields and 
+        chose one that best describes item, 
+        also prefer part number than description to assign as item name if both provided.
+        do not set name as N/M or NAN or things like that for name.
         be careful not to add the total row as a item in invoice.
     """
 
