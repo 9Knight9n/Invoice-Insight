@@ -20,13 +20,31 @@ import { enqueueSnackbar } from 'notistack';
 import Head from "next/head";
 import CopyButton from "@/components/copy-button";
 import Loading from "@/components/loading";
+import Modal from '@mui/material/Modal';
 
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: "90%",
+  backgroundColor: 'background.paper',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 4,
+  borderRadius: 4,
+  display: "flex",
+  flexDirection: 'column',
+  gap: 1,
+};
 export default function Home() {
   const [generalData, setGeneralData] = useState<InvoiceGeneralData>();
   const [comment, setComment] = useState<string>("");
   const [invoiceID, setInvoiceID] = useState<number>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false);
+  const [isOpenExportModal, setIsOpenExportModal] = useState<boolean>(false);
+  const [projectName, setProjectName] = useState<string>("");
 
   // const mainFields = ['Item Name', 'HS Code', 'Part Number'];
   const createDynamicColumns = (data: { [key: string]: string | null }[]) => {
@@ -112,6 +130,47 @@ export default function Home() {
                   <Typography mt={-4} color={"textSecondary"}>Still processing your data. Please wait a moment.</Typography>
                 </Box>
               </Grid>}
+              <Grid size={{ xs: 12, md: 12 }}>
+                <Button variant={"outlined"} onClick={() => setIsOpenExportModal(true)}>
+                  <Image src={"/images/download.svg"} alt={"download"} width={20} height={20} style={{marginRight: "4px"}}/>
+                  export for expedient
+                </Button>
+                <Modal keepMounted open={isOpenExportModal} onClose={() => setIsOpenExportModal(false)}>
+                  <Box sx={modalStyle}>
+                    <TextField
+                      fullWidth
+                      placeholder={"Enter the project name here ..."}
+                      slotProps={{ input: { sx: { borderRadius: '12px' } } }}
+                      label={"Project Name"}
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                    />
+                    <StripedDataGrid
+                      editMode="row"
+                      isCellEditable={() => true}
+                      rowHeight={30}
+                      columnHeaderHeight={40}
+                      rows={processItemWiseFeatures(generalData?.item_wise_features ?? [], true).map(row => ({
+                        ...row,
+                        projectName: projectName
+                      }))}
+                      columns={[{
+                        field: 'projectName',
+                        headerName: 'Project Name',
+                        width: 150,
+                        renderCell: () => projectName
+                      }, // eslint-disable-next-line
+                        ...createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({ hs_code_method, part_number_method, quarantine_method, ...rest }) => rest) ?? [], false))
+                      ]}
+                      getRowId={(row) => row.id}
+                      slots={{ toolbar: () => CustomToolbar("Expedient Export Preview", projectName, "contained" ) }}
+                      sx={{ borderRadius: "12px" }}
+                      getRowClassName={(params) => params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'}
+                      rowSelection={false}
+                    />
+                  </Box>
+                </Modal>
+              </Grid>
               <Grid size={{ xs: 12, md: 12 }}>
                 <StripedDataGrid
                   rowHeight={30}
@@ -219,21 +278,16 @@ export default function Home() {
     </Box>
   );
 }
-function CustomToolbar(title: string) {
+function CustomToolbar(title: string, exportName: string = "export", variantBtn: "outlined" | "text" | "contained" = "outlined") {
   return (
     <GridToolbarContainer>
-      {/*<GridToolbarColumnsButton />*/}
-      {/*<GridToolbarFilterButton />*/}
-      {/*<GridToolbarDensitySelector*/}
-      {/*  slotProps={{ tooltip: { title: 'Change density' } }}*/}
-      {/*/>*/}
-      {/*<Box sx={{ flexGrow: 1 }} />*/}
       <Typography ml={1} fontWeight={"bold"}>{title}</Typography>
       <Box sx={{ flexGrow: 1 }} />
       <GridToolbarExport
+        csvOptions={{fileName: `${exportName || title}`}}
         slotProps={{
-          tooltip: { title: 'Export data' },
-          button: { variant: 'outlined' },
+          tooltip: { title: exportName },
+          button: { variant: variantBtn as "outlined" | "text" | "contained", children: exportName},
         }}
       />
     </GridToolbarContainer>
