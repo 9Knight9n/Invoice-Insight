@@ -3,12 +3,21 @@ import math
 import os
 import tempfile
 import json
+from collections import defaultdict
+
 from PyPDF2 import PdfReader
 import fitz  # PyMuPDF
 import pdfplumber
 import camelot
 from tabula import read_pdf
 from pdfminer.high_level import extract_text
+from pdf2image import convert_from_bytes
+import pytesseract
+
+SHORT_USED_METHOD_CHOICES = {
+    'in': 'extracted_from_invoice',
+    'llm': 'naive_llm'
+}
 
 def sanitize_json(value):
     """Recursively replace NaN with None in JSON-serializable data."""
@@ -19,7 +28,10 @@ def sanitize_json(value):
     elif isinstance(value, list):
         return [sanitize_json(v) for v in value]
     elif isinstance(value, str):
-        return value.strip()
+        return (value.strip()
+                .replace("None", "null")
+                .replace(",}", "}")
+                .replace(",]", "]"))
     else:
         return value
 
@@ -27,13 +39,13 @@ def extract_text_from_pdf(pdf_file):
     """
     Extract text from a PDF file using multiple libraries.
     """
-    extracted_data = {}
+    extracted_pages = defaultdict(dict)
 
-    # Save the uploaded file temporarily for Camelot
+    # # Save the uploaded file temporarily for Camelot
     pdf_bytes = io.BytesIO(pdf_file.read())
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-        temp_file.write(pdf_bytes.getvalue())
-        temp_file_path = temp_file.name
+    # with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+    #     temp_file.write(pdf_bytes.getvalue())
+    #     temp_file_path = temp_file.name
 
     # # PyPDF2
     # pdf_reader = PdfReader(pdf_file)
@@ -50,11 +62,16 @@ def extract_text_from_pdf(pdf_file):
     # extracted_data["PyMuPDF"] = pymupdf_text
 
     # pdfplumber
-    pdfplumber_text = ""
-    with pdfplumber.open(pdf_file) as _pdf:
-        for page in _pdf.pages:
-            pdfplumber_text += page.extract_text()
-    extracted_data["pdfplumber"] = pdfplumber_text
+    try:
+        with pdfplumber.open(pdf_file) as _pdf:
+            for page_num, page in enumerate(_pdf.pages, start=1):
+                extracted_pages[f'page {page_num}']["texts extracted from pdfplumber"] = page.extract_text().strip()
+                extracted_pages[f'page {page_num}']["tables extracted from pdfplumber"] = page.extract_tables()
+                if len(extracted_pages[f'page {page_num}']["texts extracted from pdfplumber"]) == 0 & \
+                        len(extracted_pages[f'page {page_num}']["tables extracted from pdfplumber"]) == 0:
+                    del extracted_pages[f'page {page_num}']
+    except Exception as e:
+        print(f"Error using pdfplumber: {e}")
 
     # # Camelot (for tables)
     # camelot_tables = []
@@ -66,14 +83,27 @@ def extract_text_from_pdf(pdf_file):
     #     print(f"Error using Camelot: {e}")
     # extracted_data["Camelot"] = camelot_tables
 
-    # Tabula (for tables)
-    tabula_tables = []
+    # OCR with pytesseract
     try:
-        tables = read_pdf(pdf_file, pages="all", multiple_tables=True)
-        tabula_tables = [table.to_dict() for table in tables]
+        # Convert PDF bytes to images (one image per page)
+        images = convert_from_bytes(pdf_bytes.getvalue())
+        # Extract text from each image page-by-page
+        for page_num, image in enumerate(images, start=1):
+            page_text = pytesseract.image_to_string(image, lang='eng')
+            extracted_pages[f'page {page_num}']["texts extracted from pytesseract"] = page_text.strip()
+            if len(extracted_pages[f'page {page_num}']["texts extracted from pytesseract"]) == 0 :
+                del extracted_pages[f'page {page_num}']
     except Exception as e:
-        print(f"Error using Tabula: {e}")
-    extracted_data["Tabula"] = tabula_tables
+        print(f"Error using pytesseract: {e}")
+
+    # # Tabula (for tables)
+    # tabula_tables = []
+    # try:
+    #     tables = read_pdf(pdf_file, pages="all", multiple_tables=True)
+    #     tabula_tables = [table.to_dict() for table in tables]
+    # except Exception as e:
+    #     print(f"Error using Tabula: {e}")
+    # extracted_data["Tabula"] = tabula_tables
 
     # # PDFMiner
     # try:
@@ -83,10 +113,10 @@ def extract_text_from_pdf(pdf_file):
     #     pdfminer_text = f"Error using PDFMiner: {e}"
     # extracted_data["PDFMiner"] = pdfminer_text
 
-    return sanitize_json(extracted_data)
+    return sanitize_json(extracted_pages)
 
 def extract_json(content):
-    content = sanitize_json(content)
+    content = sanitize_json(content).strip()
 
     # Remove Markdown code block markers if present
     if content.startswith("```json"):
@@ -96,7 +126,7 @@ def extract_json(content):
 
     try:
         # Validate if it's a proper JSON
-        return json.loads(content)
+        return sanitize_json(json.loads(content))
     except json.JSONDecodeError:
         return {"error": "Invalid JSON format in response."}
 

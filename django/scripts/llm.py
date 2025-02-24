@@ -59,6 +59,7 @@ def call_llm_api(question, invoice_context = None, question_context = None):
         ]
     )
 
+
     # Extract the response
     if completion and completion.choices and completion.choices[0] and completion.choices[0].message and \
             completion.choices[0].message.content:
@@ -69,15 +70,39 @@ def call_llm_api(question, invoice_context = None, question_context = None):
 # extracted_text question
 question1 = \
     """
+        Extract structured data from the following invoice. 
+        Return the data in JSON format with all relevant fields. 
+        the JSON format should be list of objects each with two fields of 'Name' and 'Value' 
+        for relevant details you find, make sure the keys for 'Name' is short and descriptive 
+        as this key will later be represented to endpoint users without any changes.
+        make sure all the 'Name' and 'Value' are strings. 
+        provide whole JSON and do not truncate the JSON. 
+        
         Extract all fields provided in the invoice, 
-        except the fields related to items in invoice, they will be extracted later on,
-        just need fields that are related to the invoice features.
-        return the result as JSON. No more explanation, only a JSON is enough.
-        provide whole JSON and do not truncate the json. 
-        the json format should be list of objects each with two fields of 'Name' and 'Value' 
+        except the fields related to list items in invoice, they will be extracted later on,
+        just need fields that are related to the invoice itself.
         'Name' is the name of the field in the invoice, 
-        'Value' is the value of the field in the invoice. convert these 'Value' to string if they are not. 
-        both 'Name' and 'Value' should be user readable and easy to understand.
+        'Value' is the value of the field in the invoice.
+        
+        Example JSON Output:
+        [
+            {
+                'Name': 'Company Name',
+                'Value': 'Apple Products Co.,Ltd'  
+            },
+            {
+                'Name': 'Invoice Number',
+                'Value': 'XMK-GEW241023'  
+            },
+            {
+                'Name': 'Customer Phone',
+                'Value': '1300316550'  
+            },
+            {
+                'Name': 'Customer Name',
+                'Value': 'Sample Customer Name'    
+            }
+        ]
     """
 
 # list items in invoice
@@ -157,4 +182,83 @@ question8 = lambda item: \
         first line of your answer must be either 'yes', 'no' or 'maybe'.
         after 'yes', 'no' or 'maybe' in a new line provide me a short reasoning as well.
         you should consider ingredients for the item as well in your reasoning.
+    """
+
+# item per page
+question9 = lambda example: \
+    f"""
+        Extract structured data from the following invoice. 
+        Return the data in JSON format with all relevant fields. 
+        Returned JSON must be a list of line item, 
+        ensure the following fields are included for each item: 
+        name, hs, pn, q, hs_m, pn_m, q_m, q_d and any other relevant details.
+        for any other relevant details you find, make sure the key for field is short and descriptive 
+        as this key will later be represented to endpoint users without any changes.
+        make sure all the keys and their values are strings. 
+        provide whole JSON and do not truncate the JSON. 
+        
+        in cases when no item name is provided check other provided fields and 
+        chose one that looks most to a item name, 
+        also prefer part number rather than description to assign as item name if name is not provided.
+        do not set name to N/M or NAN or any other meaningless names like that.
+        
+        hs is short for hs code or Harmonized System Code.
+        If hs is present in the invoice, use it and set hs_m to "in".
+        If hs is missing, infer it based on the item description and set hs_m to "llm".
+        If hs is not present in invoice and can not be inferred, set both hs and hs_m to None.
+        
+        pm is short for part number.
+        If pm is present in the invoice, use it and set pm_m to "in".
+        If pm is missing, infer it based on the item description and set pm_m to "llm".
+        If pm is not present in invoice and can not be inferred, set both pm and pm_m to None.
+        
+        q is short for quarantine, it specifies whether the line item needs quarantine 
+        according to Australian border law.
+        q must be either 'yes', 'no' or 'maybe'.
+        q_d is a short reasoning for quarantine. 
+        you should consider ingredients for the item as well in your reasoning.
+        If q is present in the invoice, use it and set q_m to "in".
+        If q is missing, infer it based on the item description and set q_m to "llm".
+        If q is not present in invoice and can not be inferred, set all q, q_m and q_d to None.
+        
+        {("i have ask you same question before for previous page of invoice, "
+          "here is the result for previous page, "
+          "returned JSON must match the previous page JSON.") if example is not None else ""}
+        { "Previous page JSON Output:" if example is not None else ""}
+        { example if example is not None else ""}
+        
+        { "Example JSON Output:" if example is None else ""}
+        { 
+            '''
+                [
+                    {
+                        "name: "Chair",
+                        "hs": "732690",
+                        "hs_m": "llm",
+                        "pn": "XG11665",
+                        "pn_m": "in",
+                        "q": "no",
+                        "q_m": "llm",
+                        "q_d": "here is your reasoning for quarantine",
+                        "Description": "Office Chair",
+                        "Quantity": "2",
+                        "price": "150.00"
+                    },
+                    {
+                        "name: "Table",
+                        "hs": "732469",
+                        "hs_m": "in",
+                        "pn": None,
+                        "pn_m": None,
+                        "q": "maybe",
+                        "q_m": "llm",
+                        "q_d": "here is your reasoning for quarantine",
+                        "Description": "Office Table",
+                        "Quantity": "3",
+                        "price": "1000.00"
+                    }
+                ]
+            ''' 
+            if example is None else ""
+        }
     """

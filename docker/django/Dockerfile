@@ -19,6 +19,8 @@ RUN apt-get update -y && \
     libglib2.0-0 \
     ghostscript \
     openjdk-11-jdk \
+    poppler-utils \
+    tesseract-ocr \
     && apt-get clean
 
 RUN pip install --upgrade pip
