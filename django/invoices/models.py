@@ -66,6 +66,8 @@ class InvoiceItem(models.Model):
     quarantine_detail = models.TextField(null=True, blank=True)
     quarantine_method = models.CharField(max_length=30, choices=USED_METHOD_CHOICES, null=True, blank=True)
     metadata = models.JSONField(null=True, blank=True)
+    isApproved = models.BooleanField(default=False)
+    isDisapproved = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Item {self.part_number} in Invoice {self.invoice.id}"

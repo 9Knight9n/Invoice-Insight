@@ -1,12 +1,107 @@
-from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
-from rest_framework.response import Response
-from rest_framework import status
 from .models import Invoice, InvoiceItem
 from .serializers import CommentSerializer
 from .tasks import process_pdf
 from rest_framework import permissions
+from .serializers import ApproveItemSerializer, DisapproveItemSerializer
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiTypes
+from .serializers import InvoiceItemSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Invoice
+from .serializers import InvoiceListSerializer
+from drf_spectacular.utils import extend_schema, OpenApiTypes
 
+class InvoiceListView(APIView):
+    @extend_schema(
+        description="Get a list of all uploaded invoices",
+        responses={
+            200: InvoiceListSerializer(many=True),
+            404: OpenApiTypes.OBJECT,
+        },
+    )
+    def get(self, request, *args, **kwargs):
+        invoices = Invoice.objects.all()
+        if not invoices.exists():
+            return Response({"message": "No invoices found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = InvoiceListSerializer(invoices, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class ApprovedItemsListView(APIView):
+    @extend_schema(
+        description="Get a list of all approved invoice items",
+        responses={
+            200: InvoiceItemSerializer(many=True),
+            404: OpenApiTypes.OBJECT,
+        },
+    )
+    def get(self, request, *args, **kwargs):
+        approved_items = InvoiceItem.objects.filter(isApproved=True)
+        if not approved_items.exists():
+            return Response({"message": "No approved items found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = InvoiceItemSerializer(approved_items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class ApproveItemView(APIView):
+    @extend_schema(
+        description="Approve an invoice item",
+        request=ApproveItemSerializer,
+        responses={
+            200: ApproveItemSerializer,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+        examples=[
+            OpenApiExample(
+                name="Approve Item",
+                value={"isApproved": True},
+                request_only=True,
+            ),
+        ],
+    )
+    def patch(self, request, item_id, *args, **kwargs):
+        try:
+            item = InvoiceItem.objects.get(id=item_id)
+        except InvoiceItem.DoesNotExist:
+            return Response({"error": "Item not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ApproveItemSerializer(item, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class DisapproveItemView(APIView):
+    @extend_schema(
+        description="Disapprove an invoice item",
+        request=DisapproveItemSerializer,
+        responses={
+            200: DisapproveItemSerializer,
+            400: OpenApiTypes.OBJECT,
+            404: OpenApiTypes.OBJECT,
+        },
+        examples=[
+            OpenApiExample(
+                name="Disapprove Item",
+                value={"isDisapproved": True},
+                request_only=True,
+            ),
+        ],
+    )
+    def patch(self, request, item_id, *args, **kwargs):
+        try:
+            item = InvoiceItem.objects.get(id=item_id)
+        except InvoiceItem.DoesNotExist:
+            return Response({"error": "Item not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = DisapproveItemSerializer(item, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UploadPDFView(APIView):
     parser_classes = [MultiPartParser]
@@ -40,6 +135,7 @@ class InvoiceDetailView(APIView):
         try:
             invoice = Invoice.objects.get(id=invoice_id)
             items = InvoiceItem.objects.filter(invoice=invoice).values(
+                    "id",
                     "name",
                     "hs_code",
                     "hs_code_method",
@@ -48,6 +144,8 @@ class InvoiceDetailView(APIView):
                     "quarantine",
                     "quarantine_detail",
                     "quarantine_method",
+                    "isApproved",
+                    "isDisapproved",
                     "metadata",
                 )
             data = {
