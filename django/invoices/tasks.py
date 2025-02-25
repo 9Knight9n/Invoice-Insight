@@ -17,6 +17,8 @@ def process_pdf(invoice_id):
     try:
         # Extract text from the PDF
         extracted_pages = extract_text_from_pdf(invoice.pdf_file)
+        if len(extracted_pages.keys()) == 0:
+            invoice.status = 'failed'
         invoice.extracted_text = extracted_pages
         invoice.save()
     except Exception as e:
@@ -35,14 +37,14 @@ def process_pdf(invoice_id):
         invoice.save()
 
     exclude_fields = {"name", "hs", "hs_m", "pn", "pn_m", "q", "q_d", "q_m"}
+    last_item = None
     for page in extracted_pages.keys():
-        line_items = []
         try:
-            line_items = extract_json(call_llm_api(
-                question9(None if len(line_items) == 0 else json.dumps([line_items[0]])), extracted_pages[page]
-            ))
+            line_items = extract_json(call_llm_api(question9(last_item, extracted_pages[page])))
         except Exception as e:
             print(f"Error calling LLM on {page}: {e}")
+            continue
+        last_item = None if len(line_items) == 0 else json.dumps([line_items[0]])
         for item in line_items:
             metadata = {key: value for key, value in item.items() if key not in exclude_fields}
             try:
