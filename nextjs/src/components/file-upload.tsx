@@ -5,15 +5,19 @@ import Image from "next/image";
 import {getInvoice, InvoiceGeneralData, uploadInvoice} from "@/api";
 import { enqueueSnackbar } from 'notistack';
 import Processing from "@/components/processing";
+import { useRouter } from "next/navigation"; // تغییر به next/navigation
+import { useSearchParams } from 'next/navigation'; // اضافه کردن useSearchParams
 
 type Props = {
-  setGeneralData: React.Dispatch<React.SetStateAction<InvoiceGeneralData | undefined>>;
+  setGeneralData: React.Dispatch<React.SetStateAction<InvoiceGeneralData | null>>;
   setInvoiceID: React.Dispatch<React.SetStateAction<number | undefined>>;
   isLoading: boolean;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID, isLoading, setIsLoading}) => {
   const [files, setFiles] = useState<File[]>([]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const onDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -38,6 +42,8 @@ const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID, isLoading, s
       setIsLoading(true);
       uploadInvoice(files[0]).then(r => {
         setInvoiceID(r.invoice_id);
+        const newUrl = `${window.location.pathname}?${new URLSearchParams({ ...Object.fromEntries(searchParams), id: r.invoice_id }).toString()}`;
+        router.push(newUrl);
         enqueueSnackbar(r.message, {variant: "info"});
         // setGeneralData(mockInvoiceData);
         // setIsLoading(false);

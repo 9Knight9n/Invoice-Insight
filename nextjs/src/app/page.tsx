@@ -2,8 +2,8 @@
 import FileUpload from "@/components/file-upload";
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid2';
-import React, {useState} from "react";
-import {createInvoiceComment, InvoiceGeneralData, ItemWiseFeature} from "@/api";
+import React, {useState, useEffect} from "react";
+import {createInvoiceComment, ItemWiseFeature} from "@/api";
 import {
   DataGrid,
   GridToolbarContainer,
@@ -21,6 +21,9 @@ import Head from "next/head";
 import CopyButton from "@/components/copy-button";
 import Loading from "@/components/loading";
 import Modal from '@mui/material/Modal';
+import { useSearchParams } from 'next/navigation';
+import {useGeneralData} from "@/context/GeneralDataContext";
+import Link from "next/link";
 
 const modalStyle = {
   position: 'absolute',
@@ -38,13 +41,29 @@ const modalStyle = {
   gap: 1,
 };
 export default function Home() {
-  const [generalData, setGeneralData] = useState<InvoiceGeneralData>();
+  const searchParams = useSearchParams();
+  const { generalData, setGeneralData } = useGeneralData();
   const [comment, setComment] = useState<string>("");
   const [invoiceID, setInvoiceID] = useState<number>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false);
   const [isOpenExportModal, setIsOpenExportModal] = useState<boolean>(false);
   const [projectName, setProjectName] = useState<string>("");
+
+  useEffect(() => {
+    const idParam = searchParams.get('id');
+    if (idParam) {
+      setInvoiceID(Number(idParam));
+      const savedData = localStorage.getItem('generalData');
+      if (savedData && JSON.parse(savedData)?.id.toString() === idParam.toString()) {
+        setGeneralData(JSON.parse(savedData));
+      }
+    }
+  }, [setGeneralData, searchParams]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    console.log("generalData", generalData);
+  }, [generalData, invoiceID]);
 
   // const mainFields = ['Item Name', 'HS Code', 'Part Number'];
   const createDynamicColumns = (data: { [key: string]: string | null }[]) => {
@@ -160,7 +179,7 @@ export default function Home() {
                         width: 150,
                         renderCell: () => projectName
                       }, // eslint-disable-next-line
-                        ...createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({ hs_code_method, part_number_method, quarantine_method, ...rest }) => rest) ?? [], false))
+                        ...createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({ hs_code_method, part_number_method, quarantine_method, quarantine, quarantine_detail, ...rest }) => rest) ?? [], false))
                       ]}
                       getRowId={(row) => row.id}
                       slots={{ toolbar: () => CustomToolbar("Expedient Export Preview", projectName, "contained" ) }}
@@ -255,10 +274,18 @@ export default function Home() {
                   }}
                 />
                 <Box display="flex" width={"100%"} justifyContent={"flex-end"} gap={1} mt={1}>
-                  <Button variant={"outlined"} onClick={() => setGeneralData(undefined)}>
-                    <Image src={"/images/refresh.svg"} alt={"refresh"} width={20} height={20} style={{marginRight: "4px"}}/>
-                    Start Over
-                  </Button>
+                  <Link href={"/"}>
+                    <Button
+                      variant={"outlined"}
+                      onClick={() => {
+                        setGeneralData(null);
+                        localStorage.removeItem('generalData');
+                      }}
+                    >
+                      <Image src={"/images/refresh.svg"} alt={"refresh"} width={20} height={20} style={{marginRight: "4px"}}/>
+                      Start Over
+                    </Button>
+                  </Link>
                   <Button disabled={!comment || isSubmittingComment} variant={"contained"} onClick={() => {
                     setIsSubmittingComment(true)
                     createInvoiceComment(invoiceID, comment ?? "").then(() => {
