@@ -128,7 +128,7 @@ def extract_json(content):
         # Validate if it's a proper JSON
         return sanitize_json(json.loads(content))
     except json.JSONDecodeError:
-        return {"error": "Invalid JSON format in response."}
+        raise Exception('No answer')
 
 def extract_string(content):
     return content.strip() if not content == "None" else None
