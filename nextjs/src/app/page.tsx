@@ -76,10 +76,8 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
               }));
             setTimeout(checkInvoiceStatus, 2000);
           } else if (response.status === 'completed') {
-            console.log('Invoice processing completed:', response);
             setGeneralData(response);
             setIsLoading(false);
-            enqueueSnackbar('Invoice processing completed', {variant: 'success'});
           } else {
             console.log('Invoice status:', response.status);
             setIsLoading(false);
@@ -200,6 +198,10 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
                   }}>
                     <Image src={"/images/approvedList.svg"} alt={"approved-list"} width={20} height={20} style={{marginRight: "4px"}}/>
                     Approved Items
+                  </Button>
+                  <Button variant={"outlined"} disabled={true}>
+                    <Image src={"/images/uploadfile.svg"} alt={"approved-list"} width={20} height={20} style={{marginRight: "4px"}}/>
+                    Upload Approved Items File
                   </Button>
                 </Box>
                 <Modal keepMounted open={isOpenApprovedItems} onClose={() => setIsOpenApprovedItems(false)}>
