@@ -42,8 +42,6 @@ const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID, isLoading, s
       setIsLoading(true);
       uploadInvoice(files[0]).then(r => {
         setInvoiceID(r.invoice_id);
-        const newUrl = `${window.location.pathname}?${new URLSearchParams({ ...Object.fromEntries(searchParams), id: r.invoice_id }).toString()}`;
-        router.push(newUrl);
         enqueueSnackbar(r.message, {variant: "info"});
         // setGeneralData(mockInvoiceData);
         // setIsLoading(false);
@@ -61,6 +59,8 @@ const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID, isLoading, s
               setGeneralData(response);
               setIsLoading(false);
               enqueueSnackbar('Invoice processing completed', {variant: 'success'});
+              const newUrl = `${window.location.pathname}?${new URLSearchParams({ ...Object.fromEntries(searchParams), id: r.invoice_id }).toString()}`;
+              router.push(newUrl);
             } else {
               console.log('Invoice status:', response.status);
               setIsLoading(false);

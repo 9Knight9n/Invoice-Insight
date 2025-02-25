@@ -62,10 +62,6 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
     const idParam = searchParams.get("id");
     if (idParam) {
       setInvoiceID(Number(idParam));
-    }
-  }, [searchParams]);
-  useEffect(() => {
-    if (invoiceID) {
       const checkInvoiceStatus = () => {
         getInvoice(Number(invoiceID)).then((response) => {
           console.log(response.status);
@@ -86,7 +82,7 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
       };
       checkInvoiceStatus();
     }
-  }, [setGeneralData, invoiceID]);
+  }, [setGeneralData, invoiceID, searchParams]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -113,7 +109,7 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
             <Box display={"flex"} alignItems={"center"} gap={1}>
               <Typography color={"textPrimary"}>{params.value?.replaceAll("_", " ") || ""}</Typography>
               {params.row.hs_code && invoiceID &&
-                <ApproveCode row={params.row} setGeneralData={setGeneralData} invoiceID={invoiceID}/>
+                <ApproveCode row={params.row} setGeneralData={setGeneralData} invoiceID={Number(searchParams.get("id"))}/>
               }
             </Box>
           </Box> :
