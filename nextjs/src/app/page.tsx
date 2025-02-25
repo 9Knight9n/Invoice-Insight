@@ -74,6 +74,7 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
           } else if (response.status === 'completed') {
             setGeneralData(response);
             setIsLoading(false);
+            enqueueSnackbar('Invoice processing completed', {variant: 'success'});
           } else {
             console.log('Invoice status:', response.status);
             setIsLoading(false);

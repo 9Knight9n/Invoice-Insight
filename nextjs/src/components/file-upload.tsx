@@ -43,31 +43,31 @@ const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID, isLoading, s
       uploadInvoice(files[0]).then(r => {
         setInvoiceID(r.invoice_id);
         enqueueSnackbar(r.message, {variant: "info"});
+        const newUrl = `${window.location.pathname}?${new URLSearchParams({ ...Object.fromEntries(searchParams), id: r.invoice_id }).toString()}`;
+        router.push(newUrl);
         // setGeneralData(mockInvoiceData);
         // setIsLoading(false);
-        const checkInvoiceStatus = () => {
-          getInvoice(r.invoice_id).then((response) => {
-            console.log(response.status);
-            if (response.status === 'processing' || response.status === 'pending') {
-              if (!!response.general_features?.length && !!response.item_wise_features?.length)
-                setGeneralData(prevState => ({
-                  ...prevState, ...response
-                }));
-              setTimeout(checkInvoiceStatus, 2000);
-            } else if (response.status === 'completed') {
-              console.log('Invoice processing completed:', response);
-              setGeneralData(response);
-              setIsLoading(false);
-              enqueueSnackbar('Invoice processing completed', {variant: 'success'});
-              const newUrl = `${window.location.pathname}?${new URLSearchParams({ ...Object.fromEntries(searchParams), id: r.invoice_id }).toString()}`;
-              router.push(newUrl);
-            } else {
-              console.log('Invoice status:', response.status);
-              setIsLoading(false);
-            }
-          });
-        };
-        checkInvoiceStatus();
+        // const checkInvoiceStatus = () => {
+        //   getInvoice(r.invoice_id).then((response) => {
+        //     console.log(response.status);
+        //     if (response.status === 'processing' || response.status === 'pending') {
+        //       if (!!response.general_features?.length && !!response.item_wise_features?.length)
+        //         setGeneralData(prevState => ({
+        //           ...prevState, ...response
+        //         }));
+        //       setTimeout(checkInvoiceStatus, 2000);
+        //     } else if (response.status === 'completed') {
+        //       console.log('Invoice processing completed:', response);
+        //       setGeneralData(response);
+        //       setIsLoading(false);
+        //       enqueueSnackbar('Invoice processing completed', {variant: 'success'});
+        //     } else {
+        //       console.log('Invoice status:', response.status);
+        //       setIsLoading(false);
+        //     }
+        //   });
+        // };
+        // checkInvoiceStatus();
       }).catch(error => {
         enqueueSnackbar(error, {variant: "error"});
       }).finally(() => {});
