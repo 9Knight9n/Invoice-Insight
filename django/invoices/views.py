@@ -22,7 +22,7 @@ class InvoiceListView(APIView):
         },
     )
     def get(self, request, *args, **kwargs):
-        invoices = Invoice.objects.all()
+        invoices = Invoice.objects.all().order_by('-created_at')
         if not invoices.exists():
             return Response({"message": "No invoices found"}, status=status.HTTP_404_NOT_FOUND)
 
