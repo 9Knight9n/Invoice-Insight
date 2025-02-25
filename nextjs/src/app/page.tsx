@@ -3,7 +3,14 @@ import FileUpload from "@/components/file-upload";
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid2';
 import React, {useState, useEffect} from "react";
-import {createInvoiceComment, ItemWiseFeature} from "@/api";
+import {
+  ApprovedInvoiceItems,
+  createInvoiceComment,
+  getApprovedInvoiceItems,
+  getInvoice,
+  InvoiceGeneralData,
+  ItemWiseFeature
+} from "@/api";
 import {
   DataGrid,
   GridToolbarContainer,
@@ -24,6 +31,8 @@ import Modal from '@mui/material/Modal';
 import { useSearchParams } from 'next/navigation';
 import {useGeneralData} from "@/context/GeneralDataContext";
 import Link from "next/link";
+import ApproveCode from "@/components/hs-code-approval";
+import MyDataGrid from "@/components/ApprovedDataGrid";
 
 const modalStyle = {
   position: 'absolute',
@@ -31,6 +40,7 @@ const modalStyle = {
   left: '50%',
   transform: 'translate(-50%, -50%)',
   width: "90%",
+  height: "90%",
   backgroundColor: 'background.paper',
   border: '2px solid #000',
   boxShadow: 24,
@@ -42,28 +52,51 @@ const modalStyle = {
 };
 export default function Home() {
   const searchParams = useSearchParams();
-  const { generalData, setGeneralData } = useGeneralData();
+  // const { generalData, setGeneralData } = useGeneralData();
+  const [generalData, setGeneralData] = useState<InvoiceGeneralData | null>(null);
   const [comment, setComment] = useState<string>("");
   const [invoiceID, setInvoiceID] = useState<number>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState<boolean>(false);
   const [isOpenExportModal, setIsOpenExportModal] = useState<boolean>(false);
   const [projectName, setProjectName] = useState<string>("");
+  const [isOpenApprovedItems, setIsOpenApprovedItems] = useState<boolean>(false);
+  const [approvedItems, setApprovedItems] = useState<ApprovedInvoiceItems[]>([]);
 
   useEffect(() => {
     const idParam = searchParams.get('id');
     if (idParam) {
       setInvoiceID(Number(idParam));
-      const savedData = localStorage.getItem('generalData');
-      if (savedData && JSON.parse(savedData)?.id.toString() === idParam.toString()) {
-        setGeneralData(JSON.parse(savedData));
-      }
+      // getInvoice(Number(idParam)).then((response) => {
+      //   if(response.status === "completed") setGeneralData(response);
+      // });
+      const checkInvoiceStatus = () => {
+        getInvoice(Number(idParam)).then((response) => {
+          console.log(response.status);
+          if (response.status === 'processing' || response.status === 'pending') {
+            if (!!response.general_features?.length && !!response.item_wise_features?.length)
+              setGeneralData(prevState => ({
+                ...prevState, ...response
+              }));
+            setTimeout(checkInvoiceStatus, 2000);
+          } else if (response.status === 'completed') {
+            console.log('Invoice processing completed:', response);
+            setGeneralData(response);
+            setIsLoading(false);
+            enqueueSnackbar('Invoice processing completed', {variant: 'success'});
+          } else {
+            console.log('Invoice status:', response.status);
+            setIsLoading(false);
+          }
+        });
+      };
+      checkInvoiceStatus();
     }
   }, [setGeneralData, searchParams]);
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-    console.log("generalData", generalData);
-  }, [generalData, invoiceID]);
+  }, [invoiceID]);
 
   // const mainFields = ['Item Name', 'HS Code', 'Part Number'];
   const createDynamicColumns = (data: { [key: string]: string | null }[]) => {
@@ -78,14 +111,24 @@ export default function Home() {
     ].map((field) => ({
       field,
       headerName: field.replaceAll("_", " ").split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ").replace(/\bHs Code\b/i, "HS Code"),
-      flex: field === "Description" || field === "D E S C R I P T I O N" ? 2.5 : 1,
+      flex: field === "hs_code" ? 2.5 : field === "Description" || field === "D E S C R I P T I O N" ? 2.5 : 1,
       renderCell: (params: GridRenderCellParams) => (
-        <Box display="flex" alignItems="center">
-          {params.value !== null && <CopyButton text={params.value} />}
-          <Typography color={params.value === "extracted_from_invoice" ? "success" : params.value === "naive_llm" ? "warning" : "textPrimary"}>
-            {params.value?.replaceAll("_", " ") || ""}
-          </Typography>
-        </Box>
+        field === "hs_code" ?
+          <Box display="flex" alignItems="center">
+            {params.value !== null && <CopyButton text={params.value} />}
+            <Box display={"flex"} alignItems={"center"} gap={1}>
+              <Typography color={"textPrimary"}>{params.value?.replaceAll("_", " ") || ""}</Typography>
+              {params.row.hs_code &&
+                <ApproveCode row={params.row} setGeneralData={setGeneralData} invoiceID={Number(searchParams.get('id'))}/>
+              }
+            </Box>
+          </Box> :
+          <Box display="flex" alignItems="center">
+            {params.value !== null && <CopyButton text={params.value} />}
+            <Typography color={params.value === "extracted_from_invoice" ? "success" : params.value === "naive_llm" ? "warning" : params.value === "context_llm" ? "info" : "textPrimary"}>
+              {params.value?.toString().replaceAll("_", " ") || ""}
+            </Typography>
+          </Box>
       ),
     }));
   };
@@ -98,7 +141,7 @@ export default function Home() {
       renderCell: (params: GridRenderCellParams) => (
         <Box display="flex" alignItems="center">
           {params.value !== null && <CopyButton text={params.value} />}
-          <Typography>{params.value?.replaceAll("_", " ") || "..."}</Typography>
+          <Typography>{params.value?.toString().replaceAll("_", " ") || "..."}</Typography>
         </Box>
       ),
     }));
@@ -114,13 +157,13 @@ export default function Home() {
     itemWiseFeatures: T[],
     hasID: boolean
   ) => {
-    return itemWiseFeatures?.map((row, index) => {
+    return itemWiseFeatures?.map((row) => {
       const { metadata, ...rest } = row;
       if (hasID)
         return {
           ...rest,
           ...metadata,
-          id: (index + 1).toString()
+          // id: (index + 1).toString()
         };
       else return { ...rest, ...metadata };
     });
@@ -150,10 +193,24 @@ export default function Home() {
                 </Box>
               </Grid>}
               <Grid size={{ xs: 12, md: 12 }}>
-                <Button variant={"outlined"} onClick={() => setIsOpenExportModal(true)}>
-                  <Image src={"/images/download.svg"} alt={"download"} width={20} height={20} style={{marginRight: "4px"}}/>
-                  export for expedient
-                </Button>
+                <Box display={"flex"} alignItems={"center"} gap={1}>
+                  <Button variant={"contained"} onClick={() => setIsOpenExportModal(true)}>
+                    <Image src={"/images/download.svg"} alt={"download"} width={20} height={20} style={{marginRight: "4px"}}/>
+                    export for expedient
+                  </Button>
+                  <Button variant={"outlined"} onClick={() => {
+                    setIsOpenApprovedItems(true);
+                    getApprovedInvoiceItems().then(r => setApprovedItems(r));
+                  }}>
+                    <Image src={"/images/approvedList.svg"} alt={"approved-list"} width={20} height={20} style={{marginRight: "4px"}}/>
+                    Approved Items
+                  </Button>
+                </Box>
+                <Modal keepMounted open={isOpenApprovedItems} onClose={() => setIsOpenApprovedItems(false)}>
+                  <Box sx={modalStyle}>
+                    <MyDataGrid data={approvedItems}/>
+                  </Box>
+                </Modal>
                 <Modal keepMounted open={isOpenExportModal} onClose={() => setIsOpenExportModal(false)}>
                   <Box sx={modalStyle}>
                     <TextField
@@ -179,7 +236,7 @@ export default function Home() {
                         width: 150,
                         renderCell: () => projectName
                       }, // eslint-disable-next-line
-                        ...createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({ hs_code_method, part_number_method, quarantine_method, quarantine, quarantine_detail, ...rest }) => rest) ?? [], false))
+                        ...createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({ hs_code_method, part_number_method, quarantine_method, quarantine, quarantine_detail, isApproved, isDisapproved, ...rest }) => rest) ?? [], false))
                       ]}
                       getRowId={(row) => row.id}
                       slots={{ toolbar: () => CustomToolbar("Expedient Export Preview", projectName, "contained" ) }}
@@ -217,8 +274,8 @@ export default function Home() {
                 <StripedDataGrid
                   rowHeight={30}
                   columnHeaderHeight={40}
-                  rows={processItemWiseFeatures(generalData?.item_wise_features ?? [], true)}
-                  columns={createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features ?? [] , false))}
+                  rows={processItemWiseFeatures(generalData?.item_wise_features ?? [], true)}  // eslint-disable-next-line
+                  columns={createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({isApproved, isDisapproved, ...rest }) => rest) ?? [], false))}
                   getRowId={(row) => row.id}
                   // checkboxSelection
                   // hideFooterPagination={true}
@@ -279,7 +336,7 @@ export default function Home() {
                       variant={"outlined"}
                       onClick={() => {
                         setGeneralData(null);
-                        localStorage.removeItem('generalData');
+                        // localStorage.removeItem('generalData');
                       }}
                     >
                       <Image src={"/images/refresh.svg"} alt={"refresh"} width={20} height={20} style={{marginRight: "4px"}}/>
