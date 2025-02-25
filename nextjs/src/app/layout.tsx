@@ -57,12 +57,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <AppRouterCacheProvider options={{ key: 'css' }}>
-          <GeneralDataProvider>
+          {/*<GeneralDataProvider>*/}
             <ThemeProvider theme={theme}>
               <SnackbarProvider/>
               {children}
             </ThemeProvider>
-          </GeneralDataProvider>
+          {/*</GeneralDataProvider>*/}
         </AppRouterCacheProvider>
       </body>
     </html>
