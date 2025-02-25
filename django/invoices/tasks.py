@@ -19,6 +19,7 @@ def process_pdf(invoice_id):
         extracted_pages = extract_text_from_pdf(invoice.pdf_file)
         if len(extracted_pages.keys()) == 0:
             invoice.status = 'failed'
+            return
         invoice.extracted_text = extracted_pages
         invoice.save()
     except Exception as e:
@@ -40,7 +41,7 @@ def process_pdf(invoice_id):
     last_item = None
     for page in extracted_pages.keys():
         try:
-            line_items = extract_json(call_llm_api(question9(last_item, extracted_pages[page])))
+            line_items = extract_json(call_llm_api(question9(last_item), extracted_pages[page]))
         except Exception as e:
             print(f"Error calling LLM on {page}: {e}")
             continue
