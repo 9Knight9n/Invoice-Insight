@@ -77,6 +77,22 @@ export const getApprovedInvoiceItems = async (): Promise<ApprovedInvoiceItems[]>
   return response.json();
 };
 
+export const getUploadedInvoices = async (): Promise<UploadHistoryType[]> => {
+  const response = await fetch(`${baseUrl}/api/invoices/invoices/`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+  return response.json();
+};
+
+export type UploadHistoryType =  {
+  id: 79;
+  status: "processing" | "pending" | "completed";
+  created_at: string;
+  pdf_file_name: string;
+}
 export type ApprovedInvoiceItems = {
   id: number;
   name: string;

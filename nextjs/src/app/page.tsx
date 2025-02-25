@@ -7,9 +7,10 @@ import {
   ApprovedInvoiceItems,
   createInvoiceComment,
   getApprovedInvoiceItems,
-  getInvoice,
+  getInvoice, getUploadedInvoices,
   InvoiceGeneralData,
-  ItemWiseFeature
+  ItemWiseFeature,
+  UploadHistoryType
 } from "@/api";
 import {
   DataGrid,
@@ -33,25 +34,21 @@ import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 import ApproveCode from "@/components/hs-code-approval";
 import MyDataGrid from "@/components/ApprovedDataGrid";
+import { Suspense } from "react";
+import UploadHistory from "@/components/upload-history";
 
-const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: "90%",
-  height: "90%",
-  backgroundColor: 'background.paper',
-  border: '2px solid #000',
-  boxShadow: 24,
-  p: 4,
-  borderRadius: 4,
-  display: "flex",
-  flexDirection: 'column',
-  gap: 1,
-};
-export default function Home() {
+function SearchParamsHandler() {
   const searchParams = useSearchParams();
+  return <ChildComponent searchParams={searchParams} />;
+}
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SearchParamsHandler />
+    </Suspense>
+  );
+}
+function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
   // const { generalData, setGeneralData } = useGeneralData();
   const [generalData, setGeneralData] = useState<InvoiceGeneralData | null>(null);
   const [comment, setComment] = useState<string>("");
@@ -62,17 +59,15 @@ export default function Home() {
   const [projectName, setProjectName] = useState<string>("");
   const [isOpenApprovedItems, setIsOpenApprovedItems] = useState<boolean>(false);
   const [approvedItems, setApprovedItems] = useState<ApprovedInvoiceItems[]>([]);
+  const [uploadHistory, setUploadHistory] = useState<UploadHistoryType[]>([]);
 
   useEffect(() => {
-    const idParam = searchParams.get('id');
+    const idParam = searchParams.get("id");
     if (idParam) {
       setInvoiceID(Number(idParam));
-      // getInvoice(Number(idParam)).then((response) => {
-      //   if(response.status === "completed") setGeneralData(response);
-      // });
+      setIsLoading(true);
       const checkInvoiceStatus = () => {
         getInvoice(Number(idParam)).then((response) => {
-          console.log(response.status);
           if (response.status === 'processing' || response.status === 'pending') {
             if (!!response.general_features?.length && !!response.item_wise_features?.length)
               setGeneralData(prevState => ({
@@ -80,7 +75,6 @@ export default function Home() {
               }));
             setTimeout(checkInvoiceStatus, 2000);
           } else if (response.status === 'completed') {
-            console.log('Invoice processing completed:', response);
             setGeneralData(response);
             setIsLoading(false);
             enqueueSnackbar('Invoice processing completed', {variant: 'success'});
@@ -97,6 +91,10 @@ export default function Home() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [invoiceID]);
+
+  useEffect(() => {
+     getUploadedInvoices().then(res => setUploadHistory(res));
+  }, []);
 
   // const mainFields = ['Item Name', 'HS Code', 'Part Number'];
   const createDynamicColumns = (data: { [key: string]: string | null }[]) => {
@@ -118,8 +116,8 @@ export default function Home() {
             {params.value !== null && <CopyButton text={params.value} />}
             <Box display={"flex"} alignItems={"center"} gap={1}>
               <Typography color={"textPrimary"}>{params.value?.replaceAll("_", " ") || ""}</Typography>
-              {params.row.hs_code &&
-                <ApproveCode row={params.row} setGeneralData={setGeneralData} invoiceID={Number(searchParams.get('id'))}/>
+              {params.row.hs_code && invoiceID &&
+                <ApproveCode row={params.row} setGeneralData={setGeneralData} invoiceID={Number(searchParams.get("id"))}/>
               }
             </Box>
           </Box> :
@@ -173,16 +171,27 @@ export default function Home() {
       <Head>
         <title>Invoice Insight</title>
       </Head>
-      {!generalData && <Box display="flex" flexDirection="column" gap={2} justifyContent="center" alignItems="center" position={"absolute"} top={40}>
-        <Typography variant="h1" fontWeight={800} fontSize={"36px"} sx={{background: "linear-gradient(90deg, #3E50B4, #8E24AA)", WebkitBackgroundClip: 'text', WebkitTextFillColor: "transparent", textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'}}>
-          Invoice Insight
-        </Typography>
-        <Typography component="p" color="textSecondary" textAlign={"center"}>
-          Transform Your Invoices into Valuable Insights Instantly, Simplifying Your Financial Management!
-        </Typography>
-      </Box>}
+      {/*{!generalData && <Box display="flex" flexDirection="column" gap={2} justifyContent="center" alignItems="center" position={"absolute"} top={40}>*/}
+      {/*  <Typography variant="h1" fontWeight={800} fontSize={"36px"} sx={{background: "linear-gradient(90deg, #3E50B4, #8E24AA)", WebkitBackgroundClip: 'text', WebkitTextFillColor: "transparent", textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'}}>*/}
+      {/*    Invoice Insight*/}
+      {/*  </Typography>*/}
+      {/*  <Typography component="p" color="textSecondary" textAlign={"center"}>*/}
+      {/*    Transform Your Invoices into Valuable Insights Instantly, Simplifying Your Financial Management!*/}
+      {/*  </Typography>*/}
+      {/*</Box>}*/}
       <Box display="flex" flexDirection="column" bgcolor="white" p={4} borderRadius={4} minWidth={generalData ? "100%" : "50%"} maxWidth={"100%"} sx={{ transition: "0.5s" }}>
-        {!generalData && <FileUpload setGeneralData={setGeneralData} setInvoiceID={setInvoiceID} isLoading={isLoading} setIsLoading={setIsLoading}/>}
+        {!generalData &&
+          <Box display={"flex"} flexDirection={"column"} gap={2} alignItems={"center"} width={"100%"}>
+            <Typography variant="h1" fontWeight={800} fontSize={"36px"} sx={{background: "linear-gradient(90deg, #3E50B4, #8E24AA)", WebkitBackgroundClip: 'text', WebkitTextFillColor: "transparent", textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'}}>
+              Invoice Insight
+            </Typography>
+            <Typography component="p" color="textSecondary" textAlign={"center"}>
+              Transform Your Invoices into Valuable Insights Instantly, Simplifying Your Financial Management!
+            </Typography>
+            <FileUpload setGeneralData={setGeneralData} setInvoiceID={setInvoiceID} isLoading={isLoading} setIsLoading={setIsLoading}/>
+            <UploadHistory history={uploadHistory}/>
+          </Box>
+        }
         {generalData && invoiceID &&
           <Grow in={true} {...{ timeout: 1000 }}>
             <Grid container spacing={2}>
@@ -204,6 +213,10 @@ export default function Home() {
                   }}>
                     <Image src={"/images/approvedList.svg"} alt={"approved-list"} width={20} height={20} style={{marginRight: "4px"}}/>
                     Approved Items
+                  </Button>
+                  <Button variant={"outlined"} disabled={true}>
+                    <Image src={"/images/uploadfile.svg"} alt={"approved-list"} width={20} height={20} style={{marginRight: "4px"}}/>
+                    Upload Approved Items File
                   </Button>
                 </Box>
                 <Modal keepMounted open={isOpenApprovedItems} onClose={() => setIsOpenApprovedItems(false)}>
@@ -275,7 +288,7 @@ export default function Home() {
                   rowHeight={30}
                   columnHeaderHeight={40}
                   rows={processItemWiseFeatures(generalData?.item_wise_features ?? [], true)}  // eslint-disable-next-line
-                  columns={createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({isApproved, isDisapproved, ...rest }) => rest) ?? [], false))}
+                  columns={createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({isApproved, isDisapproved, id, ...rest }) => rest) ?? [], false))}
                   getRowId={(row) => row.id}
                   // checkboxSelection
                   // hideFooterPagination={true}
@@ -410,3 +423,19 @@ const StripedDataGrid = styled(DataGrid)(({ theme }) => ({
     },
   },
 }));
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: "90%",
+  height: "90%",
+  backgroundColor: 'background.paper',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 4,
+  borderRadius: 4,
+  display: "flex",
+  flexDirection: 'column',
+  gap: 1,
+};

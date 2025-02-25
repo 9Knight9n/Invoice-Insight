@@ -42,7 +42,6 @@ const MyDataGrid: React.FC<CustomDataGridProps> = ({ data }) => {
   }));
 
   return (
-    <Box sx={{ height: 400, width: '100%', borderRadius: 2, overflow: 'hidden' }}>
       <DataGrid
         rows={rows}
         columns={columns}
@@ -62,17 +61,16 @@ const MyDataGrid: React.FC<CustomDataGridProps> = ({ data }) => {
           },
         }}
       />
-    </Box>
   );
 };
 
 const CustomToolbar: React.FC = () => {
   return (
     <GridToolbarContainer>
-      <Typography ml={1} fontWeight={"bold"}>Exportable Data</Typography>
+      <Typography ml={1} fontWeight={"bold"}>Approved Items Preview</Typography>
       <Box sx={{ flexGrow: 1 }} />
       <GridToolbarExport
-        csvOptions={{ fileName: "exported_data" }}
+        csvOptions={{ fileName: "approved_items" }}
         slotProps={{
           tooltip: { title: 'Export' },
           button: { variant: "outlined", children: 'Export' },
