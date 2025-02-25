@@ -75,7 +75,7 @@ const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID, isLoading, s
   };
 
   return (
-    <Box>
+    <Box width={"100%"}>
       {isLoading ?
         <Box width="100%" display="flex" justifyContent="center" alignItems="center">
           <Processing/>
@@ -91,6 +91,7 @@ const FileUpload: React.FC<Props> = ({setGeneralData, setInvoiceID, isLoading, s
             textAlign: 'center',
             cursor: 'pointer',
             transition: '0.3s',
+            width: '100%',
           }}
         >
           <input

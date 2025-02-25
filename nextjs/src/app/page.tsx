@@ -7,9 +7,10 @@ import {
   ApprovedInvoiceItems,
   createInvoiceComment,
   getApprovedInvoiceItems,
-  getInvoice,
+  getInvoice, getUploadedInvoices,
   InvoiceGeneralData,
-  ItemWiseFeature
+  ItemWiseFeature,
+  UploadHistoryType
 } from "@/api";
 import {
   DataGrid,
@@ -34,6 +35,7 @@ import Link from "next/link";
 import ApproveCode from "@/components/hs-code-approval";
 import MyDataGrid from "@/components/ApprovedDataGrid";
 import { Suspense } from "react";
+import UploadHistory from "@/components/upload-history";
 
 function SearchParamsHandler() {
   const searchParams = useSearchParams();
@@ -57,14 +59,15 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
   const [projectName, setProjectName] = useState<string>("");
   const [isOpenApprovedItems, setIsOpenApprovedItems] = useState<boolean>(false);
   const [approvedItems, setApprovedItems] = useState<ApprovedInvoiceItems[]>([]);
+  const [uploadHistory, setUploadHistory] = useState<UploadHistoryType[]>([]);
 
   useEffect(() => {
     const idParam = searchParams.get("id");
     if (idParam) {
       setInvoiceID(Number(idParam));
+      setIsLoading(true);
       const checkInvoiceStatus = () => {
-        getInvoice(Number(invoiceID)).then((response) => {
-          console.log(response.status);
+        getInvoice(Number(idParam)).then((response) => {
           if (response.status === 'processing' || response.status === 'pending') {
             if (!!response.general_features?.length && !!response.item_wise_features?.length)
               setGeneralData(prevState => ({
@@ -83,11 +86,15 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
       };
       checkInvoiceStatus();
     }
-  }, [setGeneralData, invoiceID, searchParams]);
+  }, [setGeneralData, searchParams]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [invoiceID]);
+
+  useEffect(() => {
+     getUploadedInvoices().then(res => setUploadHistory(res));
+  }, []);
 
   // const mainFields = ['Item Name', 'HS Code', 'Part Number'];
   const createDynamicColumns = (data: { [key: string]: string | null }[]) => {
@@ -164,16 +171,27 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
       <Head>
         <title>Invoice Insight</title>
       </Head>
-      {!generalData && <Box display="flex" flexDirection="column" gap={2} justifyContent="center" alignItems="center" position={"absolute"} top={40}>
-        <Typography variant="h1" fontWeight={800} fontSize={"36px"} sx={{background: "linear-gradient(90deg, #3E50B4, #8E24AA)", WebkitBackgroundClip: 'text', WebkitTextFillColor: "transparent", textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'}}>
-          Invoice Insight
-        </Typography>
-        <Typography component="p" color="textSecondary" textAlign={"center"}>
-          Transform Your Invoices into Valuable Insights Instantly, Simplifying Your Financial Management!
-        </Typography>
-      </Box>}
+      {/*{!generalData && <Box display="flex" flexDirection="column" gap={2} justifyContent="center" alignItems="center" position={"absolute"} top={40}>*/}
+      {/*  <Typography variant="h1" fontWeight={800} fontSize={"36px"} sx={{background: "linear-gradient(90deg, #3E50B4, #8E24AA)", WebkitBackgroundClip: 'text', WebkitTextFillColor: "transparent", textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'}}>*/}
+      {/*    Invoice Insight*/}
+      {/*  </Typography>*/}
+      {/*  <Typography component="p" color="textSecondary" textAlign={"center"}>*/}
+      {/*    Transform Your Invoices into Valuable Insights Instantly, Simplifying Your Financial Management!*/}
+      {/*  </Typography>*/}
+      {/*</Box>}*/}
       <Box display="flex" flexDirection="column" bgcolor="white" p={4} borderRadius={4} minWidth={generalData ? "100%" : "50%"} maxWidth={"100%"} sx={{ transition: "0.5s" }}>
-        {!generalData && <FileUpload setGeneralData={setGeneralData} setInvoiceID={setInvoiceID} isLoading={isLoading} setIsLoading={setIsLoading}/>}
+        {!generalData &&
+          <Box display={"flex"} flexDirection={"column"} gap={2} alignItems={"center"} width={"100%"}>
+            <Typography variant="h1" fontWeight={800} fontSize={"36px"} sx={{background: "linear-gradient(90deg, #3E50B4, #8E24AA)", WebkitBackgroundClip: 'text', WebkitTextFillColor: "transparent", textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'}}>
+              Invoice Insight
+            </Typography>
+            <Typography component="p" color="textSecondary" textAlign={"center"}>
+              Transform Your Invoices into Valuable Insights Instantly, Simplifying Your Financial Management!
+            </Typography>
+            <FileUpload setGeneralData={setGeneralData} setInvoiceID={setInvoiceID} isLoading={isLoading} setIsLoading={setIsLoading}/>
+            <UploadHistory history={uploadHistory}/>
+          </Box>
+        }
         {generalData && invoiceID &&
           <Grow in={true} {...{ timeout: 1000 }}>
             <Grid container spacing={2}>
@@ -270,7 +288,7 @@ function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
                   rowHeight={30}
                   columnHeaderHeight={40}
                   rows={processItemWiseFeatures(generalData?.item_wise_features ?? [], true)}  // eslint-disable-next-line
-                  columns={createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({isApproved, isDisapproved, ...rest }) => rest) ?? [], false))}
+                  columns={createDynamicColumns(processItemWiseFeatures(generalData?.item_wise_features?.map(({isApproved, isDisapproved, id, ...rest }) => rest) ?? [], false))}
                   getRowId={(row) => row.id}
                   // checkboxSelection
                   // hideFooterPagination={true}
