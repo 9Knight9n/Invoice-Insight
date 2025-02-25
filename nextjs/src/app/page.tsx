@@ -33,25 +33,20 @@ import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 import ApproveCode from "@/components/hs-code-approval";
 import MyDataGrid from "@/components/ApprovedDataGrid";
+import { Suspense } from "react";
 
-const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: "90%",
-  height: "90%",
-  backgroundColor: 'background.paper',
-  border: '2px solid #000',
-  boxShadow: 24,
-  p: 4,
-  borderRadius: 4,
-  display: "flex",
-  flexDirection: 'column',
-  gap: 1,
-};
-export default function Home() {
+function SearchParamsHandler() {
   const searchParams = useSearchParams();
+  return <ChildComponent searchParams={searchParams} />;
+}
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SearchParamsHandler />
+    </Suspense>
+  );
+}
+function ChildComponent({ searchParams }: { searchParams: URLSearchParams }) {
   // const { generalData, setGeneralData } = useGeneralData();
   const [generalData, setGeneralData] = useState<InvoiceGeneralData | null>(null);
   const [comment, setComment] = useState<string>("");
@@ -64,14 +59,15 @@ export default function Home() {
   const [approvedItems, setApprovedItems] = useState<ApprovedInvoiceItems[]>([]);
 
   useEffect(() => {
-    const idParam = searchParams.get('id');
+    const idParam = searchParams.get("id");
     if (idParam) {
       setInvoiceID(Number(idParam));
-      // getInvoice(Number(idParam)).then((response) => {
-      //   if(response.status === "completed") setGeneralData(response);
-      // });
+    }
+  }, [searchParams]);
+  useEffect(() => {
+    if (invoiceID) {
       const checkInvoiceStatus = () => {
-        getInvoice(Number(idParam)).then((response) => {
+        getInvoice(Number(invoiceID)).then((response) => {
           console.log(response.status);
           if (response.status === 'processing' || response.status === 'pending') {
             if (!!response.general_features?.length && !!response.item_wise_features?.length)
@@ -92,7 +88,7 @@ export default function Home() {
       };
       checkInvoiceStatus();
     }
-  }, [setGeneralData, searchParams]);
+  }, [setGeneralData, invoiceID]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -118,8 +114,8 @@ export default function Home() {
             {params.value !== null && <CopyButton text={params.value} />}
             <Box display={"flex"} alignItems={"center"} gap={1}>
               <Typography color={"textPrimary"}>{params.value?.replaceAll("_", " ") || ""}</Typography>
-              {params.row.hs_code &&
-                <ApproveCode row={params.row} setGeneralData={setGeneralData} invoiceID={Number(searchParams.get('id'))}/>
+              {params.row.hs_code && invoiceID &&
+                <ApproveCode row={params.row} setGeneralData={setGeneralData} invoiceID={invoiceID}/>
               }
             </Box>
           </Box> :
@@ -410,3 +406,19 @@ const StripedDataGrid = styled(DataGrid)(({ theme }) => ({
     },
   },
 }));
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: "90%",
+  height: "90%",
+  backgroundColor: 'background.paper',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 4,
+  borderRadius: 4,
+  display: "flex",
+  flexDirection: 'column',
+  gap: 1,
+};
