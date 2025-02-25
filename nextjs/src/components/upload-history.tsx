@@ -25,6 +25,7 @@ const UploadHistory: React.FC<Props> = ({history}) => {
       textAlign: 'center',
       transition: '0.3s',
       width: '100%',
+      minHeight: '300px',
       maxHeight: '300px',
       overflow: "auto",
       display: 'flex',
